@@ -48,7 +48,7 @@ function loadOffice(){
   if(!window.THREE){ if(st) st.classList.add('no-webgl'); return; }
   officeLoaded=true;
   if(st) st.classList.remove('no-webgl');
-  loadScript('office.js?v=1001f')
+  loadScript('office.js?v=1001h')
     .catch(()=>{   // 한 번 실패해도 다음에 열 때 다시 시도
       officeLoaded=false;
       document.querySelectorAll('script[data-office]').forEach(s=>s.remove());
