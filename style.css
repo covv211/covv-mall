@@ -84,17 +84,8 @@ button { font: inherit; color: inherit; }
 .nav nav a:hover, .nav nav a.active { opacity: 1; }
 .nav nav a.active { color: #b0306e; }
 .nav nav a.nav-mall { color: #b0306e; opacity: 1; }   /* 코브 몰은 늘 또렷하게 */
-/* 오른쪽 묶음: 방문자 수 + 로그인 */
-.nav-right { justify-self: end; display: flex; align-items: center; gap: 10px; min-width: 0; }
-/* 방문자 수 (visitors.js가 채움, 누르면 개인정보 처리방침) */
-.nav-visit { display: inline-flex; align-items: baseline; gap: 4px; padding: 5px 12px 6px; border-radius: 999px; background: rgba(255, 255, 255, .6); box-shadow: inset 0 0 0 1.5px var(--line); color: #5b3350; font-size: 16px; white-space: nowrap; font-variant-numeric: tabular-nums; transition: background .2s; }
-.nav-visit:hover { background: #fff; }
-.nav-visit b { color: #b0306e; }
-.nav-visit-label { opacity: .7; }
-.nav-visit-sep { opacity: .4; margin: 0 2px; }
-.nav-visit[hidden] { display: none; }
 /* 로그인 · 계정 만들기 (계정이 있으면 내 닉네임) */
-.nav-acct { display: inline-flex; align-items: center; gap: 5px; padding: 5px 13px 6px 10px; border: 0; border-radius: 999px; background: var(--accent-soft); color: #b0306e; font: inherit; font-size: 18px; letter-spacing: inherit; white-space: nowrap; cursor: pointer; transition: background .2s; }
+.nav-acct { justify-self: end; display: inline-flex; align-items: center; gap: 5px; padding: 5px 13px 6px 10px; border: 0; border-radius: 999px; background: var(--accent-soft); color: #b0306e; font: inherit; font-size: 18px; letter-spacing: inherit; white-space: nowrap; cursor: pointer; transition: background .2s; }
 .nav-acct:hover { background: #ffd6e8; }
 .nav-acct.on { background: #cc3a82; color: #fff; }
 .nav-acct-icon { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
@@ -827,10 +818,9 @@ body.pv { height: auto; overflow: auto; background: var(--bg); }
     .nav { height: 48px; padding: 0 16px; top: 10px; }
     .nav-acct { padding: 5px 7px; }
     .nav-acct-text { display: none; }   /* 휴대폰은 아이콘만 (이름은 aria-label로) */
-    .nav-visit { position: absolute; top: calc(100% + 6px); right: 6px; padding: 3px 10px 4px; background: rgba(255, 255, 255, .8); box-shadow: 0 4px 14px rgba(90, 40, 60, .14); font-size: 14px; }   /* 메뉴 줄에 자리가 없어 알약 바로 아래 오른쪽에 붙임 */
     .logo { font-size: 21px; }
     .nav nav { gap: 12px; }
-    .field-title { top: 104px; }   /* 메뉴 아래 오른쪽의 방문자 수와 겹치지 않게 */
+    .field-title { top: 70px; }
     .field-hint { font-size: 17px; bottom: 18px; white-space: normal; width: max-content; max-width: calc(100% - 96px); text-align: center; left: 16px; transform: none; }
     .sound-btn { width: 40px; height: 40px; font-size: 17px; bottom: 18px; }
     .bag-hud { top: 116px; right: 12px; gap: 7px; padding: 4px 8px 4px 11px; font-size: 17px; }   /* 제목 위 쇼핑 안내와 겹치지 않게 제목 옆으로 */
