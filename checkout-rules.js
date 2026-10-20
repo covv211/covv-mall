@@ -25,6 +25,8 @@ const QTY_MAX=99;              // 한 주문에서 한 상품 최대 수량
 const LINES_MAX=20;            // 한 주문에 담을 수 있는 상품 종류
 const PRICE_MAX=10000000;      // 가격표 실수 방지 (천만 원)
 const MIN_PAY=100;             // 결제 회사 최소 결제 금액
+const SHIP_FEE=3000;           // 배송비 예시 (✏️ 주인님이 정하면 바꾸기) — 쿠폰으로 할인 안 됨
+const SHIP_FREE=30000;         // 상품 금액(쿠폰 할인 전 합계)이 이만큼 넘으면 배송비 무료 (✏️ 예시)
 
 const has=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);   // '__proto__' 같은 이름으로 가격표 밖을 못 읽게
 const isInt=(v,min,max)=>typeof v==='number'&&Number.isInteger(v)&&v>=min&&v<=max;
@@ -41,6 +43,9 @@ function coupons(v){ return Math.floor(coins(v)/COUPON_COINS); }
 function coinsToNext(v){ const c=coins(v); return c+COUPON_COINS>BAG_MAX?0:COUPON_COINS-c%COUPON_COINS; }
 // 할인받을 수 있는 상품인지 (가격표에 coupon:false로 빼 둔 상품, 1,000원 미만 상품은 제외)
 function eligible(p){ return !!p&&p.coupon!==false&&p.price>=COUPON_MIN_PRICE; }
+
+// 배송비: 상품 금액(쿠폰 할인 전 합계) 기준 — 무료 기준 이상이면 0, 이상한 값이면 기본 배송비
+function shippingFor(subtotal){ return typeof subtotal==='number'&&Number.isFinite(subtotal)&&subtotal>=SHIP_FREE?0:SHIP_FEE; }
 
 /* 주문 계산 (서버는 이 결과의 total만 결제 금액으로 씀)
    order   = {items:[{id:'pink', qty:2}, ...], coins: 브라우저가 말한 금화 개수}
@@ -98,8 +103,8 @@ function refund(line,units,returned){
   return units*line.price-Math.min(units,offLeft)*COUPON_WON;
 }
 
-const R=Object.freeze({COUPON_COINS,COUPON_WON,BAG_MAX,COUPON_MIN_PRICE,QTY_MAX,LINES_MAX,MIN_PAY,
-  coins,coupons,coinsToNext,eligible,quote,refund});
+const R=Object.freeze({COUPON_COINS,COUPON_WON,BAG_MAX,COUPON_MIN_PRICE,QTY_MAX,LINES_MAX,MIN_PAY,SHIP_FEE,SHIP_FREE,
+  coins,coupons,coinsToNext,eligible,shippingFor,quote,refund});
 if(typeof module==='object'&&module&&module.exports) module.exports=R;
 else g.covvRules=R;
 })(typeof globalThis!=='undefined'?globalThis:this);

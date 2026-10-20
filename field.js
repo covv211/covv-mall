@@ -8,9 +8,13 @@
    - 거품을 누르면 펑! → 코브가 낙하산을 펴고 살랑살랑 내려와 땅에 닿는 순간 그 코브의 화면(소개/작업물/연락처/오피스)으로 전환
    - 빈 거품이 들판 곳곳에서 떠올라 천장에 닿으면 펑 → 가끔 아이템(별·하트·코인·사탕·보석)을 떨굼, 코브가 지나가면 주움
    - 아주 가끔 히든 컬러 아이템(무지개 물방울) → 먹으면 코브 색이 바뀜 (드물게 무지개 코브)
-   - 코브 몰: 들판 한쪽 키링 가게(점원 코브). 가게 앞에 가면 코브 몰 화면으로. 주운 아이템은 가방(mall.js의 covvWallet)에 저장
+   - 코브 몰: 들판 한쪽 키링 가게(점원 코브). 간판의 '🛍️ 코브 몰' 이름표(또는 메뉴)를 누르면 코브 몰 화면으로 — 가게 앞에 걸어가도 저절로 열리지 않음(2026-10-04 주인님 요청). 주운 아이템은 가방(mall.js의 covvWallet)에 저장
+     카운터 위에 배경 지운 키링 사진 5장(images/stall/)을 눕혀 늘어놓음 + 카운터 앞면에 같은 5장이 한 장씩 넘어가는 슬라이더 (크게 보기는 코브 몰 화면에서 — 들판 사진은 진열만)
+     가게 오른쪽 나무 + 주인님이 고른 나무 3그루에 6가지 색 작은 코브 키링이 기둥에서 뻗은 가지 끝에 2~4개씩 매달려 살랑살랑,
+     바위 위에 하나씩·벤치 위에 둘씩 앉아 있음 (나중에 제품 진열 자리)
+   - 마우스 휠 버튼을 누른 채 끌면 화면이 코브 둘레로 돎(세로로 끌면 높낮이), 키보드 방향도 화면 기준으로 따라 돎
    - 금화가 9,999개를 넘으면(해킹 환영 ㅋㅋ) 선글라스 쓴 '해커 코브'로 변신
-   - 주인공 이름표는 '🐾 코브' → 코브 몰 계정을 만들면 내 닉네임 (mall.js covvWallet.coveName)
+   - 주인공 이름표는 '🐾 코브' → 코브 몰 계정에 로그인 중이면 내 닉네임 (mall.js covvWallet.coveName)
    - 발열 대책: 외부 모델 0개(전부 코드로 생성), 풀·꽃은 인스턴싱 한 번에 그림, 후처리 없음,
      움직이지 않는 소품은 합쳐서 그림, 그림자는 한 번만 계산, 픽셀비율·프레임 상한, 다른 화면이 열리면 렌더 정지
    ══════════════════════════════════════════════════════════ */
@@ -57,6 +61,38 @@ const POUCH_CHANCE=0.15;           // 금화 주머니(금화 10개)를 떨굴 �
 const POUCH_COINS=10;              // 금화 주머니 하나에 든 금화
 const HACKER_COINS=9999;           // 금화를 가방 최대(9,999개)까지 채우면 해커 코브 🕶️
 const STALL={x:5.4,z:3.4,ry:-0.35}; // 코브 몰 가게 자리 (ry: 앞쪽이 카메라·출발점을 보게 살짝 돌림)
+const STALL_PICS=[                 // 코브 몰 카운터 윗판에 눕혀 늘어놓는 키링 사진(앞면 슬라이더도 같은 5장), 배경을 지운 300×300 투명 사진
+  'images/stall/keyring-1.webp',     // 주황 호랑이
+  'images/stall/keyring-2.webp',     // 보라 머리 캐릭터
+  'images/stall/keyring-3.webp',     // 도토리 다람쥐
+  'images/stall/keyring-4.webp',     // 초록 공룡
+  'images/stall/keyring-5.webp',     // 무지개 여우 인형
+];
+const PIC_S=.36, PIC_GAP=.41;     // 가판대 사진 한 장 크기·간격 (카운터 폭 안에 5장, 앞 기둥과 안 겹치게)
+const PIC_Z=.36;                  // 카운터 윗판(뒤 -.2 ~ 앞 .745) 위 사진을 눕혀 둘 자리 (앞뒤)
+const PIC_YAW=[.07,-.05,.03,-.08,.05];   // 손으로 늘어놓은 듯 살짝씩 비뚤게 (라디안)
+const SLIDE_SPEED=2, SLIDE_WAIT=1;        // 가판대 앞면 슬라이더: 한 장 넘어가는 시간(초, swiper speed 2s), 넘어간 뒤 멈춰 있는 시간(초)
+const SLIDE_W=2.2, SLIDE_H=.84, SLIDE_Y=.47;   // 슬라이더 판 폭(양 끝은 앞 기둥 뒤로 숨음)·높이·가운데 높이 (카운터 앞면 0~.95)
+const SLIDE_IMG=.45, SLIDE_PITCH=.51;     // 슬라이드 사진(흰 바탕 카드) 크기·간격 — 기본 카메라, 화면 높이 800px쯤에서 약 30×30px, 카드 사이 약 4px(swiper spaceBetween)
+const KEY_TREES=[                         // 코브 키링을 거는 나무 = 제품 진열 자리 (나중에 제품을 등록하면 3D로 만든 제품을 나무에 걸거나 바위·벤치 위에 올려 둘 것,
+  {x:9.6, z:4.6,  n:4},                   //   지금 코브 키링은 자리 표시) — 코브 몰 바로 오른쪽
+  {x:-5.4,z:-11.6,n:3},                   // 작업물 거품 뒤   ┐
+  {x:5.6, z:-8.4, n:4},                   // 내 오피스 뒤 큰 나무 ├ 2026-10-02 주인님이 화면에 빨간 펜으로 고른 3그루
+  {x:11,  z:-6.2, n:2},                   // 그 오른쪽     ┘
+];                                        // x,z는 아래 나무 목록의 자리와 같아야 함 (그 자리 나무를 찾아 크기에 맞춰 매닮, n=키링 수 2~4)
+const KEY_COLORS=['분홍','민트','하늘','라벤더','레몬','복숭아'];   // 코브 키링 색 6가지 (COVE_COLORS 이름, 나무마다 시작 색을 돌림)
+const KEY_S=.3;                           // 코브 키링 크기 — 기본 카메라, 화면 높이 800px쯤에서 코브가 약 37px (처음 75px의 절반, 너무 커서 줄임)
+const KEY_DROP=1.8;                       // 매다는 점에서 코브 몸 가운데까지(월드) — 크기를 바꿔도 매달린 높이는 그대로, 끈 길이가 맞춰짐
+const KEY_R=1.85, KEY_HANG=3.15;          // 나무 크기 1당: 기둥에서 매다는 자리까지 거리(잎 가장자리)·매다는 높이 (크기 1.3 나무 → 2.4 · 4.1)
+const KEY_HANG_MIN=3.75;                  // 매다는 높이 하한 — 번갈아 .35 낮춰도 코브 발이 1.3 위라 주인공 코브가 밑을 지나가도 안 닿음
+const KEY_MID=3;                          // 화면 밖 판정 구의 가운데 높이(나무 밑동 기준)
+const KEY_GAP=.64;                        // 한 나무에 건 키링 사이 간격 (나무 크기 1당 매다는 거리 대비) — 2~4개가 나무 앞에 고르게
+const LIMB_Y=2.1, LIMB_BEND=.6;           // 키링 매단 가지: 기둥에서 나오는 높이(나무 크기 1당, 잎 뭉치 속) · 꺾이는 곳(기둥→끝 가로 거리 대비, 거기서부터 거의 수평)
+const LIMB_R=[.12,.07,.045], LIMB_TIP=.16;   // 가지 굵기(밑동·꺾이는 곳·끝, 월드) · 끈 묶은 자리 너머로 더 뻗은 길이 (끝까지 잎 덩어리 속)
+const LIMB_LEAF=[[.6,.7],[.88,.6]];       // 가지를 덮는 큰 잎 덩어리 [기둥→매다는 점 가로 거리 대비 자리, 크기(나무 크기 1당, 꼭대기 잎 .75~1.2와 비슷)]
+                                          // 2026-10-02 가지만 → 작은 잎 뭉치 → 주인님 요청으로 큰 잎으로 덮음 (끈이 잎 속에서 내려옴)
+const SIT_R=.55, SIT_LIFT=.3;             // 바위·벤치 위에 앉은 키링: 화면 밖 판정 구 반지름, 구 가운데를 앉는 면에서 올리는 높이
+const KEY_METAL='#c9ccd6', KEY_CORD='#8e5a44';   // 키링 고리(은색)·나무에 묶은 끈
 const RAINBOW_CHANCE=0.1;          // 히든 아이템을 먹었을 때 '무지개 코브'가 될 확률
 const COVE_COLORS=[                // 히든 아이템으로 바뀔 수 있는 코브 색
   {name:'분홍',hex:'#ff9ccb'},{name:'민트',hex:'#8fe3c4'},{name:'하늘',hex:'#8cc8ff'},{name:'라벤더',hex:'#c3a6ff'},
@@ -76,6 +112,8 @@ const CAMS={
   mid: {off:[0,9.6,15],   look:[0,2.6,-1],   fov:46},
   tall:{off:[0,12.5,17.5],look:[0,3.2,-1.5], fov:54},
 };
+const CAM_ROT=.005;                // 휠 버튼을 누른 채 끌 때 1px당 회전(라디안) — 가로로 끌면 코브 둘레를 돌고, 세로로 끌면 높낮이
+const CAM_EL_MIN=.2, CAM_EL_MAX=1.25;   // 카메라 높이각 범위(라디안, 기본 약 .57) — 너무 눕거나 바로 위에서 내려다보지 않게
 
 /* ── 고정 시드 난수 (새로고침해도 배치가 같게) ── */
 let seed=20260929;
@@ -150,6 +188,14 @@ scene.fog=new THREE.Fog(new THREE.Color(HORIZON),26,64);   // r134는 색 변환
 const camera=new THREE.PerspectiveCamera(42,1,.1,320);
 let camCfg=CAMS.wide;
 const camOff=new THREE.Vector3(), camLookOff=new THREE.Vector3(), follow=new THREE.Vector3(SPAWN.x,0,SPAWN.z), camLook=new THREE.Vector3();
+let camYaw=0, camPitch=0;   // 휠 버튼 끌기로 돌린 만큼 (가로 회전, 높이각 더하기) — 0이면 처음 화면
+const camOffNow=new THREE.Vector3(), camLookNow=new THREE.Vector3(), Y_AXIS=new THREE.Vector3(0,1,0);
+const camEl0=()=>Math.atan2(camOff.y,Math.hypot(camOff.x,camOff.z));   // 화면 비율별 기본 높이각
+function orbitOff(){   // 기본 카메라 자리(camOff·camLookOff)를 주인공 코브 둘레로 돌린 자리
+  const r=camOff.length(), el=Math.min(CAM_EL_MAX,Math.max(CAM_EL_MIN,camEl0()+camPitch));
+  camOffNow.set(Math.sin(camYaw)*r*Math.cos(el),r*Math.sin(el),Math.cos(camYaw)*r*Math.cos(el));
+  camLookNow.copy(camLookOff).applyAxisAngle(Y_AXIS,camYaw);
+}
 
 /* 하늘 돔 (위는 보라, 지평선은 살구) */
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(180,24,12),new THREE.ShaderMaterial({
@@ -298,7 +344,9 @@ function freeSpot(minR,maxR,clr){
 })();
 
 /* 나무 (둥근 가을 잎 뭉치) */
+const TREES=[];   // 심은 나무 {x,z,s} — 코브 키링을 걸 나무를 위치로 찾을 때 씀
 function tree(x,z,s,ti){
+  TREES.push({x,z,s});
   const g=new THREE.Group();
   const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.16,.28,2.3,6),TRUNK); trunk.position.y=1.15; g.add(trunk);
   const br=new THREE.Mesh(new THREE.CylinderGeometry(.07,.11,1.1,5),TRUNK); br.position.set(.35,1.9,0); br.rotation.z=-.7; g.add(br);
@@ -310,9 +358,47 @@ function tree(x,z,s,ti){
   OBST.push({x,z,r:0.32*s});
 }
 [[-12.8,-2.4,1.4],[-13.6,-9.6,1.5],[-5.4,-11.6,1.3],[5.6,-8.4,1.6],[11,-6.2,1.4],[9.6,4.6,1.3],[-8.4,7.4,1.3]].forEach(([x,z,s],i)=>tree(x,z,s,i));
+// 코브 키링 거는 나무마다 {x,y(밑동 땅),z,s(나무 크기),spots:[{x,y,z,c}]} — 매다는 자리는 카메라 쪽 반원 위에 화면 가로 간격이 고르게(부채꼴로 나누면 양 끝이 겹침),
+// 높이는 번갈아 낮춰 덜 겹치게. 나무 목록과 자리가 어긋나면 그 나무는 건너뜀
+const KEY_RACKS=KEY_TREES.map((k,ti)=>{
+  const t=TREES.find(t=>Math.hypot(t.x-k.x,t.z-k.z)<.5); if(!t) return null;
+  const R=KEY_R*t.s, hi=Math.max(KEY_HANG_MIN,KEY_HANG*t.s), spots=[];
+  for(let i=0;i<k.n;i++){
+    const dx=(i-(k.n-1)/2)*R*KEY_GAP, x=t.x+dx, z=t.z+Math.sqrt(R*R-dx*dx), h=hi-(i%2)*.35;
+    spots.push({x,z,y:groundY(x,z)+h,c:KEY_COLORS[(i+ti*2)%KEY_COLORS.length]});
+  }
+  return {x:t.x,y:groundY(t.x,t.z),z:t.z,s:t.s,spots};
+}).filter(Boolean);
+// 매다는 자리마다 기둥(잎 뭉치 속)에서 뻗어 나온 가지 → 비스듬히 오르다 거의 수평으로 꺾여 끝 조금 안쪽에 끈을 묶음,
+// 가지는 큰 잎 덩어리로 덮어 나무 꼭대기 잎이 앞으로 넓게 퍼진 모양 (끈이 잎 속에서 내려옴)
+// 예전엔 매다는 자리 위에 작은 잎 뭉치만 따로 달아서 위에서 보면 풍선처럼 떠 보였음 → 잎이 꼭대기 잎과 이어지게. 줄기·잎 재질이 같아 합쳐져서 그리기 호출이 늘지 않음
+// rr()를 쓰면 고정 시드 난수 순서가 밀려 들판 배치가 바뀌므로 난수 없이 (잎 회전·색은 순번으로)
+(()=>{
+  const a=new THREE.Vector3(), b=new THREE.Vector3(), c=new THREE.Vector3(), d=new THREE.Vector3(), h=new THREE.Vector3(), o=new THREE.Vector3();
+  const limb=(p,q,r0,r1)=>{   // p→q, 굵기 r0→r1 (CylinderGeometry는 위쪽이 q)
+    d.subVectors(q,p);
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r0,d.length(),5),TRUNK); m.quaternion.setFromUnitVectors(Y_AXIS,d.normalize());
+    const x=(p.x+q.x)/2, z=(p.z+q.z)/2; add(m,x,z,(p.y+q.y)/2-groundY(x,z));
+  };
+  let n=0;
+  const leaf=(sz,x,z,y)=>{ const m=new THREE.Mesh(new THREE.IcosahedronGeometry(sz,0),LEAF[n%LEAF.length]); m.rotation.set(n*1.3,n*.7,n*.4); n++; add(m,x,z,y-groundY(x,z)); };
+  for(const r of KEY_RACKS) for(const p of r.spots){
+    const L=Math.hypot(p.x-r.x,p.z-r.z); h.set(p.x-r.x,0,p.z-r.z).normalize();   // 기둥→매다는 점 가로 거리·방향
+    a.set(r.x,r.y+LIMB_Y*r.s,r.z);   // 기둥 속
+    b.set(r.x+h.x*L*LIMB_BEND,p.y-.1,r.z+h.z*L*LIMB_BEND);   // 꺾이는 곳 (끝보다 살짝 낮게 → 끝이 조금 들림)
+    c.set(p.x+h.x*LIMB_TIP,p.y+.03+.13*LIMB_TIP/(L*(1-LIMB_BEND)),p.z+h.z*LIMB_TIP);   // 끝 — 같은 기울기로 이어서 끈 묶은 자리에서 가지 가운데가 매다는 점 +.03 (끈 윗끝이 가지에 걸침)
+    limb(a,b,LIMB_R[0],LIMB_R[1]); limb(b,c,LIMB_R[1],LIMB_R[2]);
+    for(const [f,k] of LIMB_LEAF){   // 가지 그 자리 바로 위에 (가지가 잎 아래쪽 속으로 지나감)
+      if(f<=LIMB_BEND) o.lerpVectors(a,b,f/LIMB_BEND); else o.lerpVectors(b,c,(f-LIMB_BEND)/(1+LIMB_TIP/L-LIMB_BEND));
+      leaf(k*r.s,o.x,o.z,o.y+k*r.s*.35);
+    }
+  }
+})();
 
-/* 코브 몰 (키링 노점: 카운터 · 분홍 줄무늬 차양 · 간판 · 걸려 있는 키링) */
+/* 코브 몰 (키링 노점: 카운터 · 분홍 줄무늬 차양 · 간판 · 걸려 있는 키링 · 카운터에 누워 있는 키링 사진) */
 const stallLocal=(lx,lz)=>{ const c=Math.cos(STALL.ry), s=Math.sin(STALL.ry); return [STALL.x+lx*c+lz*s, STALL.z-lx*s+lz*c]; };
+const pics=[];   // 가판대 사진 {mesh,img} (img는 앞면 슬라이더도 같이 씀)
+const slider={tex:null,mesh:null,k:0,t:0,edge:0};   // 가판대 앞면 슬라이더 (움직임은 updateSlider)
 (()=>{
   const SW=mat('#c7825c'), SWD=mat('#8e5a44'), AWN=[mat('#ff9ccb'),mat('#fff1e6')];
   const RINGS=['#ff9ccb','#a6d4ff','#aeeccf','#d4bfff'].map(h=>mat(h,{roughness:.5}));
@@ -334,6 +420,43 @@ const stallLocal=(lx,lz)=>{ const c=Math.cos(STALL.ry), s=Math.sin(STALL.ry); re
     box(.012,.2,.012,SWD,x,1.84,.6);
     const d=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.035,14),m); d.rotation.x=Math.PI/2; d.position.set(x,1.64,.6); g.add(d);
   });
+  // 가판대 키링 (배경 지운 사진을 진짜 노점처럼 카운터 윗판에 그대로 눕혀 늘어놓음, 살짝씩 비뚤게) — 사진은 불러오는 대로 채움,
+  // 재질이 사진마다 달라서 합치지 않고 따로 남음. 누워 있어서 점원 코브 얼굴을 가리지 않음
+  const ANISO=Math.min(4,renderer.capabilities.getMaxAnisotropy());   // 비스듬히 봐도 사진이 뭉개지지 않게
+  STALL_PICS.forEach((src,i)=>{
+    const st=new THREE.Group(); st.position.set((i-(STALL_PICS.length-1)/2)*PIC_GAP,1.03,PIC_Z); st.rotation.y=PIC_YAW[i%PIC_YAW.length]; g.add(st);
+    const pc=document.createElement('canvas'); pc.width=pc.height=256;
+    const px=pc.getContext('2d');
+    const tex=new THREE.CanvasTexture(pc); tex.encoding=THREE.sRGBEncoding; tex.anisotropy=ANISO;
+    const img=new Image(); img.decoding='async';
+    img.onload=()=>{ const k=Math.min(256/img.naturalWidth,256/img.naturalHeight), w=img.naturalWidth*k, h=img.naturalHeight*k; px.drawImage(img,128-w/2,128-h/2,w,h); tex.needsUpdate=true; };   // 불러오기 전엔 투명
+    img.src=src;
+    const m=new THREE.MeshStandardMaterial({map:tex,transparent:true,alphaTest:.04,depthWrite:false,roughness:.9,emissive:C('#ffffff'),emissiveMap:tex,emissiveIntensity:.15});   // 배경이 투명이라 키링 모양만, 해질녘 빛에서도 색이 죽지 않게 살짝 스스로 밝힘
+    seeThrough(m);
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(PIC_S,PIC_S),m); mesh.rotation.x=-Math.PI/2; mesh.position.y=.004; st.add(mesh);
+    pics.push({mesh,img});
+  });
+  // 가판대 앞면 슬라이더 (같은 키링 5장이 한 장씩 왼쪽으로 넘어감, 끝나면 처음으로 이어짐)
+  // 5장을 한 줄로 그린 텍스처를 처음 한 번만 올리고 offset만 옮김 → 움직이는 동안 텍스처를 다시 올리지 않아 GPU 부담 없음
+  (()=>{
+    const N=STALL_PICS.length, CH=128, CW=Math.round(CH*SLIDE_PITCH/SLIDE_H), IMG=Math.round(CH*SLIDE_IMG/SLIDE_H);
+    const sc=document.createElement('canvas'); sc.width=CW*N; sc.height=CH;
+    const sx=sc.getContext('2d');
+    const tex=new THREE.CanvasTexture(sc); tex.encoding=THREE.sRGBEncoding; tex.anisotropy=ANISO; tex.wrapS=THREE.RepeatWrapping;
+    tex.repeat.x=SLIDE_W/(SLIDE_PITCH*N);
+    pics.forEach((p,i)=>{
+      const x0=i*CW+(CW-IMG)/2, y0=(CH-IMG)/2, r=IMG*.12, PAD=IMG*.08;
+      sx.fillStyle='#fff'; sx.beginPath(); sx.moveTo(x0+r,y0); sx.arcTo(x0+IMG,y0,x0+IMG,y0+IMG,r); sx.arcTo(x0+IMG,y0+IMG,x0,y0+IMG,r); sx.arcTo(x0,y0+IMG,x0,y0,r); sx.arcTo(x0,y0,x0+IMG,y0,r); sx.fill();   // 흰 바탕 카드 (사진보다 먼저 보임)
+      const draw=()=>{ const img=p.img, k=Math.min((IMG-PAD*2)/img.naturalWidth,(IMG-PAD*2)/img.naturalHeight), w=img.naturalWidth*k, h=img.naturalHeight*k; sx.drawImage(img,x0+(IMG-w)/2,y0+(IMG-h)/2,w,h); tex.needsUpdate=true; };
+      if(p.img.complete&&p.img.naturalWidth) draw(); else p.img.addEventListener('load',draw);
+    });
+    const m=new THREE.MeshStandardMaterial({map:tex,transparent:true,alphaTest:.04,depthWrite:false,roughness:.9,emissive:C('#ffffff'),emissiveMap:tex,emissiveIntensity:.15});
+    seeThrough(m);
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(SLIDE_W,SLIDE_H),m); mesh.position.set(0,SLIDE_Y,.66); g.add(mesh);   // 카운터 앞면(.65) 바로 앞, 기둥 앞면(.68)보다 안쪽
+    const V=SLIDE_W/SLIDE_PITCH;   // 한 번에 보이는 장 수 (조각 포함)
+    Object.assign(slider,{tex,mesh,edge:(V-Math.floor(V))/2});   // 멈춰 있을 땐 다 보이는 장들이 가운데, 양옆 조각은 기둥 뒤
+    tex.offset.x=-slider.edge/N;
+  })();
   // 간판 "코브 몰"
   const c=document.createElement('canvas'); c.width=256; c.height=96;
   const x2=c.getContext('2d');
@@ -349,17 +472,23 @@ const stallLocal=(lx,lz)=>{ const c=Math.cos(STALL.ry), s=Math.sin(STALL.ry); re
   const face=new THREE.MeshStandardMaterial({map:tex,roughness:.9});
   const board=new THREE.Mesh(new THREE.BoxGeometry(1.6,.6,.08),[SWD,SWD,SWD,SWD,face,SWD]); board.position.set(0,2.95,-.72); g.add(board);
   g.rotation.y=STALL.ry; add(g,STALL.x,STALL.z);
+  g.updateMatrixWorld(true);
+  slider.mesh.castShadow=false;
+  pics.forEach(p=>{ p.mesh.castShadow=false; });   // 그림자는 끔(투명한 네모 그림자가 생김)
   OBST.push({x:STALL.x,z:STALL.z,r:1.3});
 })();
 for(let i=0;i<22;i++){ const p=freeSpot(8,31,{path:2.2,pond:1.5,spawn:7,home:3.5,gap:3.2}); if(p) tree(p[0],p[1],rr(1.05,1.7),i+7); }
 
 /* 보랏빛 바위 (각진 덩어리) — 연못가에 몇 개, 나머지는 흩어서 */
+const ROCKS=[], DOWN=new THREE.Raycaster(), DOWN_O=new THREE.Vector3(), DOWN_D=new THREE.Vector3(0,-1,0);   // 바위 {x,z,top} — 키링을 올려 둘 꼭대기 높이 (나중에 합쳐지므로 지금 잼)
 function rock(x,z,s,i){
   const geo=i%3===0?new THREE.DodecahedronGeometry(1,0):new THREE.BoxGeometry(1.3,1,1.2);
   const r=new THREE.Mesh(geo,ROCK[i%3]);
   r.scale.set(s*rr(.8,1.25),s*rr(.6,1.0),s*rr(.8,1.2)); r.rotation.set(rr(-.15,.15),rr(0,Math.PI),rr(-.15,.15));
   add(r,x,z,s*0.28);
   OBST.push({x,z,r:s*0.72});
+  r.updateMatrixWorld(); DOWN.set(DOWN_O.set(x,20,z),DOWN_D); const h=DOWN.intersectObject(r)[0];   // 비스듬한 바위라 가운데 바로 위 표면 높이
+  if(h) ROCKS.push({x,z,top:h.point.y});
 }
 let ri=0;
 PONDS.forEach(p=>{ for(let k=0;k<4;k++){ const a=rr(0,Math.PI*2); const x=p.x+Math.cos(a)*p.rx*1.05, z=p.z+Math.sin(a)*p.rz*1.05; if(!onBridge(x,z,0.8)&&pathD(x,z)>1.2) rock(x,z,rr(.6,1.1),ri++); } });
@@ -403,7 +532,9 @@ function lantern(x,z){
 })();
 
 /* 벤치 */
+const BENCHES=[];   // 벤치 {x,z,ry} — 키링을 앉혀 둘 자리
 function bench(x,z,ry){
+  BENCHES.push({x,z,ry});
   const g=new THREE.Group();
   for(let i=0;i<3;i++){ const s=new THREE.Mesh(new THREE.BoxGeometry(1.8,.08,.18),WOOD); s.position.set(0,.55,-.2+i*.2); g.add(s); }
   for(let i=0;i<2;i++){ const s=new THREE.Mesh(new THREE.BoxGeometry(1.8,.08,.16),WOOD); s.position.set(0,.85+i*.22,-.34); s.rotation.x=-.15; g.add(s); }
@@ -637,6 +768,7 @@ function updatePlayer(dt,T){
   if(keys.size){
     dx=(keys.has('r')?1:0)-(keys.has('l')?1:0); dz=(keys.has('d')?1:0)-(keys.has('u')?1:0);
     const l=Math.hypot(dx,dz); if(l){ dx/=l; dz/=l; want=RUN; }
+    if(camYaw){ const c=Math.cos(camYaw), s=Math.sin(camYaw); [dx,dz]=[dx*c+dz*s,-dx*s+dz*c]; }   // 화면을 돌렸으면 ↑는 늘 화면 안쪽(카메라 반대쪽)
     P.dest=null;
   } else if(P.dest){
     const ex=P.dest.x-P.pos.x, ez=P.dest.z-P.pos.z, d=Math.hypot(ex,ez);
@@ -1295,6 +1427,107 @@ function updateItems(dt,T){
   }
 }
 
+// 가판대 앞면 슬라이더: SLIDE_WAIT초 멈춤 → SLIDE_SPEED초 동안 한 장 넘어감 (반복)
+function updateSlider(dt){
+  const s=slider, N=STALL_PICS.length; if(!s.tex) return;
+  s.t+=dt;
+  if(s.t>=SLIDE_WAIT+SLIDE_SPEED){ s.t-=SLIDE_WAIT+SLIDE_SPEED; s.k=(s.k+1)%N; }
+  const k=Math.max(0,s.t-SLIDE_WAIT)/SLIDE_SPEED;
+  s.tex.offset.x=(s.k+easeInOutCubic(k)-s.edge)/N;
+}
+
+/* ══════════ 나무에 걸린 코브 키링 (코브 몰 옆 + 주인님이 고른 3그루) · 바위·벤치 위에 앉은 키링 ══════════ */
+// 색만 다른 코브라 나무마다 부위별 InstancedMesh 3개(털 · 눈코 · 고리)로 그림 → 보이는 나무 하나에 그리기 호출 3번 (코브를 그대로 만들면 키링 하나에 14번)
+// 나무마다 따로 두는 건 화면 밖 나무를 통째로 안 그리려고 (한 덩어리면 들판 끝끼리 퍼져서 늘 그려짐)
+const keyrings=(()=>{
+  const P=KEY_DROP/KEY_S;   // 매다는 점 높이 (코브 몸 가운데 0 기준, 코브 크기 단위) — 매다는 점이 원점이 되게 전부 P만큼 내림
+  const fur=[], face=[], metal=[];
+  // 코브 모양은 makeCove를 그대로 구워 씀 (주인공·점원과 같은 생김새, 나중에 바뀌어도 따라감)
+  // 키링 코브는 화면에서 37px쯤이라 구 분할을 1/3로 (삼각형 약 1/9, 키링이 들판에 30개 넘게 보여서)
+  const tmp=makeCove('#ffffff'); tmp.group.position.y=-P; tmp.group.updateMatrixWorld(true);
+  const hex=m=>'#'+m.color.clone().convertLinearToSRGB().getHexString();
+  const low=g=>{ const a=g.parameters; return g.type==='SphereGeometry'?new THREE.SphereGeometry(a.radius,Math.max(6,Math.ceil(a.widthSegments/3)),Math.max(4,Math.ceil(a.heightSegments/3))):g.clone(); };
+  tmp.group.traverse(o=>{ if(o.isMesh) (o.material===tmp.fur?fur:face).push([low(o.geometry).applyMatrix4(o.matrixWorld),hex(o.material)]); });
+  tmp.fur.dispose();
+  // 키링 고리: 머리 위 작은 링 → 사슬 3개(번갈아 90° 돌림) → 큰 링 → 나무에 묶은 끈
+  const m4=new THREE.Matrix4(), v=new THREE.Vector3(), q=new THREE.Quaternion(), e=new THREE.Euler(), s=new THREE.Vector3();
+  const sitMetal=[], TILT=new THREE.Matrix4().makeTranslation(0,.68-P,0).multiply(new THREE.Matrix4().makeRotationX(-.5)).multiply(new THREE.Matrix4().makeTranslation(0,P-.68,0));   // 앉은 키링: 고리를 머리 위에서 뒤로 눕힘
+  const part=(geo,hx,y,ry=0,sy=1,hangOnly=false)=>{
+    m4.compose(v.set(0,y-P,0),q.setFromEuler(e.set(0,ry,0)),s.set(1,sy,1));
+    if(!hangOnly) sitMetal.push([geo.clone().applyMatrix4(TILT.clone().multiply(m4)),hx]);
+    metal.push([geo.applyMatrix4(m4),hx]);
+  };
+  part(new THREE.TorusGeometry(.12,.032,4,10),KEY_METAL,.74);   // 아래쪽이 머리(.68)에 살짝 박힘
+  [.98,1.18,1.38].forEach((y,i)=>part(new THREE.TorusGeometry(.075,.025,3,8),KEY_METAL,y,i%2?0:Math.PI/2,1.6));
+  part(new THREE.TorusGeometry(.26,.04,4,14),KEY_METAL,1.73);
+  part(new THREE.CylinderGeometry(.05,.05,P+.3-1.95,5),KEY_CORD,(1.95+P+.3)/2,0,1,true);   // 큰 링 위에서 가지까지 (윗끝은 가지에 걸침) (굵기는 줄인 크기에서도 화면에 보이게, 매단 키링만)
+  const furM=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.5,metalness:0});
+  furM.onBeforeCompile=sh=>{   // makeCove처럼 털색으로 살짝 스스로 밝힘 (색이 인스턴스마다 달라서 재질 emissive 대신 셰이더에서)
+    sh.fragmentShader=sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n  totalEmissiveRadiance=vColor*.22;');
+  };
+  const geos=[colorGeo(fur),colorGeo(face),colorGeo(metal)];
+  const mats=[furM,new THREE.MeshBasicMaterial({vertexColors:true}),new THREE.MeshStandardMaterial({vertexColors:true,roughness:.35,metalness:.2})];
+  // 화면 밖 판정 구: 메시 자리 = 나무 밑동이라 밑동 기준으로 가장 먼 매다는 점·코브 발끝까지 + 흔들림 여유 (세 모양·모든 나무가 같은 구를 씀)
+  let rad=0;
+  for(const r of KEY_RACKS) for(const p of r.spots) for(const dy of [0,-KEY_DROP-KEY_S]) rad=Math.max(rad,Math.hypot(p.x-r.x,p.y-r.y+dy-KEY_MID,p.z-r.z));
+  geos.forEach(g=>g.boundingSphere.set(new THREE.Vector3(0,KEY_MID,0),rad+.5));
+  const racks=KEY_RACKS.map(r=>{
+    const ims=geos.map((g,j)=>{
+      const im=new THREE.InstancedMesh(g,mats[j],r.spots.length);
+      im.position.set(r.x,r.y,r.z); im.frustumCulled=true;   // r134 InstancedMesh는 기본이 안 함 → 직접 켜야 화면 밖 나무를 안 그림
+      scene.add(im); return im;
+    });
+    r.spots.forEach((p,i)=>ims[0].setColorAt(i,C(COVE_COLORS.find(c=>c.name===p.c).hex)));
+    return {r,ims};
+  });
+  // 바위 위에 하나씩 · 벤치 위에 둘씩 앉은 키링 — 들판 곳곳에 흩어져 있어서 모양별 InstancedMesh 하나에 모으고,
+  // 매 프레임 화면 안에 든 것만 앞자리로 모아 count만큼 그림 (그리기 호출 3번, 화면 밖 키링은 안 그림)
+  const spots=[
+    ...ROCKS.map((r,i)=>({x:r.x,y:r.top-.03,z:r.z,yaw:((i*7)%5-2)*.15})),   // 카메라 쪽을 보되 조금씩 다르게
+    ...BENCHES.flatMap(b=>[-.45,.45].map(lx=>({x:b.x+lx*Math.cos(b.ry),y:groundY(b.x,b.z)+.59,z:b.z-lx*Math.sin(b.ry),yaw:b.ry}))),   // 앉는 판 양쪽에 둘, 벤치가 보는 쪽을 봄
+  ].map((p,i)=>({
+    m4:new THREE.Matrix4().compose(v.set(p.x,p.y+(P+1)*KEY_S,p.z),q.setFromEuler(e.set(0,p.yaw,0)),s.setScalar(KEY_S)),   // 발바닥(코브 가운데 아래 1)이 앉는 면에
+    sphere:new THREE.Sphere(new THREE.Vector3(p.x,p.y+SIT_LIFT,p.z),SIT_R),
+    color:C(COVE_COLORS.find(c=>c.name===KEY_COLORS[i%KEY_COLORS.length]).hex),
+  }));
+  const sitGeo=colorGeo(sitMetal);
+  const sit={spots,slot:[],n:0,ims:[geos[0],geos[1],sitGeo].map((g,j)=>{
+    const im=new THREE.InstancedMesh(g,mats[j],spots.length);
+    im.count=0; im.frustumCulled=false;   // 화면 밖 판정은 updateSitters가 키링마다 직접
+    scene.add(im); return im;
+  })};
+  sit.ims[0].setColorAt(0,spots.length?spots[0].color:C('#ffffff'));   // 색 버퍼를 처음 그리기 전에 만들어 둠
+  return {racks,sit,m4,v,q,e,s};
+})();
+// 앉은 키링: 화면 안에 든 것만 앞자리(0..n-1)로 모음 — 보이는 목록이 바뀔 때만 행렬·색을 다시 올림
+const SIT_FR=new THREE.Frustum(), SIT_PM=new THREE.Matrix4();
+function updateSitters(){
+  const S=keyrings.sit;
+  camera.updateMatrixWorld(); SIT_PM.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse); SIT_FR.setFromProjectionMatrix(SIT_PM);
+  let n=0, changed=false;
+  S.spots.forEach((p,i)=>{
+    if(!SIT_FR.intersectsSphere(p.sphere)) return;
+    if(S.slot[n]!==i){ S.slot[n]=i; for(const m of S.ims) m.setMatrixAt(n,p.m4); S.ims[0].setColorAt(n,p.color); changed=true; }
+    n++;
+  });
+  if(n!==S.n){ S.n=n; for(const m of S.ims) m.count=n; }
+  if(changed){ for(const m of S.ims) m.instanceMatrix.needsUpdate=true; S.ims[0].instanceColor.needsUpdate=true; }
+}
+// 바람에 살랑: 매다는 점을 축으로 앞뒤·좌우로 조금, 끈을 축으로 천천히 빙글 (키링마다 박자를 다르게)
+function updateKeyrings(T){
+  const K=keyrings; let k=0;
+  for(const {r,ims} of K.racks){
+    r.spots.forEach((p,i)=>{
+      const ph=(k++)*1.7;
+      K.e.set(Math.sin(T*1.1+ph)*.05,Math.sin(T*.45+ph)*.35,Math.sin(T*1.3+ph*1.3)*.07);
+      K.m4.compose(K.v.set(p.x-r.x,p.y-r.y,p.z-r.z),K.q.setFromEuler(K.e),K.s.setScalar(KEY_S));
+      for(const m of ims) m.setMatrixAt(i,K.m4);
+    });
+    for(const m of ims) m.instanceMatrix.needsUpdate=true;
+  }
+}
+updateKeyrings(0);
+
 /* ══════════ 코브 몰 점원 · 해커 코브 ══════════ */
 const shop=(()=>{
   const g=makeCove('#ffc98a'); g.group.scale.setScalar(S);
@@ -1305,17 +1538,15 @@ const shop=(()=>{
   tag.innerHTML='<span aria-hidden="true">🛍️</span> 코브 몰';
   tag.setAttribute('aria-label','코브 몰 들어가기');
   tagsEl.appendChild(tag);
-  const [fx,fz]=stallLocal(0,1.5);   // 가게 앞 (여기 들어오면 가게 화면으로)
   const [bx,bz]=stallLocal(0,-.72);  // 간판 자리 (이름표를 여기 붙임)
-  const s={g,tag,shown:false,inside:false,front:{x:fx,z:fz},board:{x:bx,z:bz},hw:0,wave:0};
+  const s={g,tag,shown:false,board:{x:bx,z:bz},hw:0,wave:0};
   tag.addEventListener('click',()=>openShop());
   return s;
 })();
 function openShop(){
   if(paused||!window.covvOpenScreen) return;
   const sp=screenPos(sv.set(shop.g.group.position.x,shop.g.group.position.y+0.4,shop.g.group.position.z));
-  // 다른 화면 전환 중이라 못 열었으면 '들어옴'을 풀어서 다음 프레임에 다시 시도
-  Promise.resolve(window.covvOpenScreen('mall',{x:sp.x,y:sp.y})).then(ok=>{ if(!ok&&!paused) shop.inside=false; });
+  window.covvOpenScreen('mall',{x:sp.x,y:sp.y});
 }
 function updateShop(dt,T){
   const g=shop.g, P=player;
@@ -1327,10 +1558,6 @@ function updateShop(dt,T){
   g.bodyG.rotation.set(0,0,Math.sin(T*1.1)*0.05);
   poseG(g,i=>i===1?[0,.25*shop.wave+Math.sin(T*9)*.08*shop.wave,.05*shop.wave]:[0,Math.sin(T*1.6+i)*.02,0]);
   g.group.position.y=1.05+Math.abs(Math.sin(T*2.2))*0.03;
-  // 가게 앞에 '들어서는 순간'에만 가게 화면으로 (돌아왔을 때 가게 앞이면 다시 열리지 않게)
-  const inside=P.state==='walk'&&Math.hypot(P.pos.x-shop.front.x,P.pos.z-shop.front.z)<1.05;
-  if(inside&&!shop.inside&&!navCv) openShop();   // 거품을 터트려 다른 화면으로 가는 중이면 그 이동을 가로채지 않음
-  shop.inside=inside;
 }
 // 해커 코브: 금화가 말도 안 되게 많으면 선글라스 🕶️ (해킹 환영 ㅋㅋ)
 const shades=(()=>{
@@ -1344,11 +1571,11 @@ const shades=(()=>{
 let hacker=false, hackerCheck=0;
 // 이미 해커인 채로 들어오면 조용히 선글라스만 (소식·효과음은 '되는 순간'에만)
 (()=>{ const W=window.covvWallet; if(W&&W.get('coin')>=HACKER_COINS){ hacker=true; shades.visible=true; } })();
-// 이름표: 코브 몰 계정을 만들면 '코브' 대신 내 닉네임 (mall.js covvWallet.coveName)
+// 이름표: 코브 몰 계정에 로그인 중이면 '코브' 대신 내 닉네임 (mall.js covvWallet.coveName)
 const coveName=()=>{ const W=window.covvWallet; return W&&W.coveName?W.coveName():'코브'; };
 function paintTag(){ player.tag.textContent=(hacker?'🕶️ 해커 ':'🐾 ')+coveName(); }
 paintTag();
-// 계정을 만들거나 닉네임을 바꾸면 바로 반영 (다른 탭에서 바꿔도) — 들판이 보일 때 바뀌면 머리 위에 한 번 알려 줌
+// 계정을 만들거나 로그인·로그아웃하거나 닉네임을 바꾸면 바로 반영 (다른 탭에서 바꿔도) — 들판이 보일 때 바뀌면 머리 위에 한 번 알려 줌
 if(window.covvWallet) window.covvWallet.on(k=>{
   if(k!=='profile'&&k!=='account'&&k!=='*') return;
   const before=player.tag.textContent; paintTag();
@@ -1435,7 +1662,13 @@ function groundAt(cx,cy){
   return {x:hitP.x,z:hitP.z};
 }
 let press=null, pointerHeld=false;
+let orbit=null;   // 휠 버튼을 누른 채 끄는 중 {x,y,id}
 cvs.addEventListener('pointerdown',e=>{
+  if(e.button===1&&e.pointerType==='mouse'){   // 휠 버튼: 화면 회전 (윈도우 크롬의 자동 스크롤 아이콘도 막음)
+    e.preventDefault(); orbit={x:e.clientX,y:e.clientY,id:e.pointerId}; cvs.style.cursor='grabbing';
+    try{ cvs.setPointerCapture(e.pointerId); }catch(_){}
+    return;
+  }
   if(e.button!==undefined&&e.button!==0) return;
   sfx.unlock();
   const hit=pickBubble(e.clientX,e.clientY);
@@ -1446,11 +1679,21 @@ cvs.addEventListener('pointerdown',e=>{
   }
 });
 cvs.addEventListener('pointermove',e=>{
+  if(orbit&&e.pointerId===orbit.id){
+    const e0=camEl0();
+    camYaw-=(e.clientX-orbit.x)*CAM_ROT;   // 오른쪽으로 끌면 들판이 오른쪽으로 돎 (three.js OrbitControls와 같은 방향)
+    camPitch=Math.min(CAM_EL_MAX-e0,Math.max(CAM_EL_MIN-e0,camPitch+(e.clientY-orbit.y)*CAM_ROT));   // 아래로 끌면 위에서 내려다봄
+    orbit.x=e.clientX; orbit.y=e.clientY;
+    return;
+  }
   if(pointerHeld&&press&&e.pointerId===press.id){   // 누른 채로 끌면 코브가 커서를 따라감
     const g=groundAt(e.clientX,e.clientY); if(g) player.dest=g;
     return;
   }
-  if(!IS_TOUCH){ const h=pickBubble(e.clientX,e.clientY); hoverCv=h&&h.cv||null; hoverAmb=h&&h.amb||null; cvs.style.cursor=h?'pointer':''; }
+  if(!IS_TOUCH){
+    const h=pickBubble(e.clientX,e.clientY); hoverCv=h&&h.cv||null; hoverAmb=h&&h.amb||null;
+    cvs.style.cursor=h?'pointer':'';
+  }
 });
 function endPress(e){
   if(!press||(e&&e.pointerId!==press.id)) return;
@@ -1458,7 +1701,11 @@ function endPress(e){
   pointerHeld=false; press=null;
 }
 cvs.addEventListener('pointerup',endPress);
-cvs.addEventListener('pointercancel',()=>{ pointerHeld=false; press=null; });
+cvs.addEventListener('pointercancel',()=>{ pointerHeld=false; press=null; orbit=null; });
+const endOrbit=e=>{ if(orbit&&e.pointerId===orbit.id){ orbit=null; cvs.style.cursor=''; } };
+cvs.addEventListener('pointerup',endOrbit); cvs.addEventListener('lostpointercapture',endOrbit);
+cvs.addEventListener('mousedown',e=>{ if(e.button===1) e.preventDefault(); });   // 자동 스크롤 막기 (일부 브라우저는 pointerdown만으로는 안 막힘)
+
 const KEYMAP={ArrowUp:'u',KeyW:'u',ArrowDown:'d',KeyS:'d',ArrowLeft:'l',KeyA:'l',ArrowRight:'r',KeyD:'r'};
 addEventListener('keydown',e=>{
   const k=KEYMAP[e.code]; if(!k||paused||e.metaKey||e.ctrlKey||e.altKey) return;
@@ -1500,7 +1747,7 @@ function update(dt){
   // 카메라가 주인공 코브를 부드럽게 따라감
   follow.x+=(player.pos.x-follow.x)*Math.min(1,dt*3.2);
   follow.z+=(player.pos.z-follow.z)*Math.min(1,dt*3.2);
-  camWant.copy(follow).add(camOff); lookWant.copy(follow).add(camLookOff);
+  orbitOff(); camWant.copy(follow).add(camOffNow); lookWant.copy(follow).add(camLookNow);
   camera.position.lerp(camWant,Math.min(1,dt*6)); camLook.lerp(lookWant,Math.min(1,dt*6));
   camera.lookAt(camLook);
   for(const cv of coves) updateCove(cv,dt,T);
@@ -1508,6 +1755,9 @@ function update(dt){
   updateItems(dt,T);
   updateShop(dt,T);
   updateHacker(dt);
+  updateSlider(dt);
+  updateKeyrings(T);
+  updateSitters();
   for(let i=bursts.length-1;i>=0;i--){
     const b=bursts[i]; b.t+=dt;
     const arr=b.pts.geometry.attributes.position.array;
@@ -1564,7 +1814,7 @@ window.covvField={
     if(!cv||!onScreen(cv.pos,-0.05)) return false;
     return popCove(cv,true);
   },
-  pause(){ paused=true; pointerHeld=false; press=null; keys.clear(); stop(); updateTags(); },
+  pause(){ paused=true; pointerHeld=false; press=null; orbit=null; keys.clear(); stop(); updateTags(); },
   colors:[...COVE_COLORS.map(c=>({name:c.name,hex:c.hex})),{name:'무지개',hex:null}],
   coveColor(){ return player.colorName; },
   setCoveColor(name){ return applyLook(name); },   // 사탕으로 고른 색 (가게 화면에서 → 들판에 돌아오면 바뀌어 있음)
@@ -1581,14 +1831,13 @@ window.covvField={
     paused=false;
     for(const cv of coves) if(cv.state==='landed'||cv.state==='fall') respawn(cv);
     navCv=null;   // 떨어지는 도중 다른 화면이 열렸던 경우에도 '이동 대기'가 남지 않게
-    shop.inside=Math.hypot(player.pos.x-shop.front.x,player.pos.z-shop.front.z)<1.05;
     start();
   },
 };
 if(window.covvWallet&&window.covvWallet.state.look&&window.covvWallet.state.look!=='분홍') applyLook(window.covvWallet.state.look);
 
 // 디버그용: 브라우저 창이 가려져 있어도 시간을 직접 흘려서 확인할 수 있게
-window._field={renderer,scene,camera,coves,player,popCove,amb,items,collected,spawnAmb,popAmb,dropItem,changeCoveColor,shop,
+window._field={renderer,scene,camera,coves,player,popCove,amb,items,collected,spawnAmb,popAmb,dropItem,changeCoveColor,shop,pics,slider,keyrings,TREES,
 
   step(sec){ if(first){ first=false; loading&&loading.classList.add('hide'); startIntro(); player.state='emerge'; player.g.group.visible=true; }
     for(let t=0;t<sec;t+=1/60) update(1/60); renderer.render(scene,camera); }};

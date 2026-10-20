@@ -13,11 +13,11 @@
     <meta name="description" content="코브가 사는 covv의 작은 들판">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Hahmlet:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
     <!-- 외부 파일의 integrity = 원본 파일의 지문. 누가 CDN 파일을 바꿔치기하면 지문이 달라져서 브라우저가 실행하지 않음 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" integrity="sha384-uR1wgObmx89ZQ4VVXHdzjbDJZ1PvBK01K+E3GebmaBKdZ87qRJvBWPoPbzWeEd5T" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="stylesheet" href="default.css?v=1002a">
-    <link rel="stylesheet" href="style.css?v=1002a">
+    <link rel="stylesheet" href="default.css?v=1006l">
+    <link rel="stylesheet" href="style.css?v=1006l">
 </head>
 <body>
 
@@ -31,8 +31,8 @@
             <a href="#office" data-go="office">내 오피스</a>
             <a class="nav-mall" href="#mall" data-go="mall">코브 몰</a>
         </nav>
-        <!-- 로그인 · 계정 만들기 (myoffice.js가 닉네임을 채움 — 계정이 있으면 내 오피스 계정 탭으로) -->
-        <button class="nav-acct" type="button" id="navAcct" aria-label="로그인 · 계정 만들기"><svg class="nav-acct-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.6-4.2 3.6-6.5 7.5-6.5s6.9 2.3 7.5 6.5"/></svg><span class="nav-acct-text" data-acct-label>로그인</span></button>
+        <!-- 로그인 · 회원가입 (myoffice.js가 닉네임을 채움 — 로그인 중이면 내 오피스 계정 탭으로, 아니면 로그인 창) -->
+        <button class="nav-acct" type="button" id="navAcct" aria-label="로그인 · 회원가입"><svg class="nav-acct-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.6-4.2 3.6-6.5 7.5-6.5s6.9 2.3 7.5 6.5"/></svg><span class="nav-acct-text" data-acct-label>로그인</span></button>
     </header>
 
     <!-- 홈: 코브 들판 (3D) -->
@@ -89,8 +89,10 @@
                     <span>만들고 싶은 걸 직접 만드는 사람</span>
                     <!-- 코브 몰 SNS (✏️ 계정을 만든 뒤 href="#"에 주소를 넣으세요 — 주소가 '#'이면 '준비 중'으로 보이고 눌러도 아무 일 없음) -->
                     <div class="sns">
-                        <a class="sns-link insta" href="#" target="_blank" rel="noopener noreferrer">📷 코브 몰 인스타그램</a>
-                        <a class="sns-link kakao" href="#" target="_blank" rel="noopener noreferrer">💬 카카오톡 채널</a>
+                        <a class="sns-link insta" href="#" target="_blank" rel="noopener noreferrer"><img src="images/인스타.png" alt="">코브 인스타그램</a>
+                        <a class="sns-link kakao" href="#" target="_blank" rel="noopener noreferrer"><img src="images/카카오톡.png" alt="">코브 카카오톡</a>
+                        <a class="sns-link kakao" href="#" target="_blank" rel="noopener noreferrer"><img src="images/meta.jpeg" alt="">코브 메타</a>
+                        <a class="sns-link kakao" href="#" target="_blank" rel="noopener noreferrer"><img src="images/youtube.png" alt="">코브 유튜브</a>
                     </div>
                     <!-- 방문자 IP 기록 안내 (보관 기간을 바꾸면 server/visitors.py RETAIN_DAYS·privacy.html도 같이) -->
                     <p class="privacy-note">👀 방문자 수와 서버 보안을 위해 접속 IP를 90일 보관해요 · <a href="privacy.html">개인정보 처리방침</a></p>
@@ -201,6 +203,13 @@
                     <h2 id="mhTitle">코브 친구의 오피스</h2>
                     <p class="mh-count">TODAY <b id="mhToday">0</b> <span aria-hidden="true">|</span> TOTAL <b id="mhTotal">0</b></p>
                 </header>
+                <!-- 로그아웃하면 보이는 잠금 (계정이 있는데 로그인 안 한 상태 — 프로필·다이어리·계정 정보를 가림, myoffice.js가 켜고 끔) -->
+                <div class="mh-empty mh-lock" id="mhLock" hidden>
+                    <p class="mh-empty-emoji" aria-hidden="true">🔒</p>
+                    <h3>로그아웃했어요</h3>
+                    <p>로그인하면 내 프로필·다이어리·계정 정보를 다시 볼 수 있어요.</p>
+                    <button type="button" class="mh-btn" data-login>로그인</button>
+                </div>
                 <div class="mh-body">
                     <aside class="mh-side" aria-label="프로필">
                         <div class="mh-avatar" id="mhAvatar"></div>
@@ -279,46 +288,159 @@
     <section class="screen screen-mall" data-screen="mall" id="mall" aria-label="코브 몰">
         <div class="screen-inner">
             <button class="back" type="button" data-close>← 들판으로</button>
+            <!-- 히어로: 1분 2D 모션 광고 (캔버스는 hero.js가 그림, 소리 없이 반복 · 화면 밖이거나 코브 몰이 닫히면 멈춤) -->
+            <div class="mall-hero" id="mallHero">
+                <canvas class="hero-film" id="heroFilm" width="1280" height="720" role="img" aria-label="코브 몰 1분 광고. 해질녘 들판에서 거품 속 코브가 눈을 뜨고, 낙하산으로 내려와 금화 100개를 모아 쿠폰 1장(키링 1개 100원 할인)을 만들어요. 가게를 지나 키링 진열대에서 하트를 주고, 사탕으로 색을 바꾼 뒤 ‘코브 몰 — 들판에서 놀고, 키링으로 데려가요’로 끝나요."></canvas>
+                <div class="hero-bar">
+                    <button class="hero-play" type="button" data-hero-play aria-label="광고 멈추기">❚❚</button>
+                    <span class="hero-track" aria-hidden="true"><i data-hero-fill></i></span>
+                    <button class="hero-shop" type="button" data-hero-shop>키링 보러 가기 ↓</button>
+                </div>
+            </div>
             <div class="section-head">
-                <p class="eyebrow">COVE MALL</p>
+                <p class="eyebrow">COVV MALL</p>
                 <h2>코브 몰 🛍️</h2>
-                <p class="lead">들판에서 모은 아이템으로 키링을 응원하고, 금화로 할인받는 코브 키링 가게예요.</p>
+                <!-- <p class="lead">들판에서 모은 아이템으로 키링을 응원하고, 금화로 할인받는 코브 키링 가게예요.</p> -->
             </div>
             <div id="mallRoot"></div>
         </div>
     </section>
 
+    <!-- 주문/결제 (네이버 주문서 참고: 왼쪽 주문 정보 · 오른쪽 결제 금액, 내용은 checkout.js가 채움 — 맨 위 '내 가방'은 mall.js가 채움) -->
+    <section class="screen screen-checkout" data-screen="checkout" id="checkout" aria-label="주문/결제">
+        <div class="screen-inner">
+            <button class="back" type="button" data-go="mall">← 코브 몰로</button>
+            <div class="section-head">
+                <p class="eyebrow">ORDER</p>
+                <h2>주문/결제</h2>
+            </div>
+            <ol class="co-steps" aria-label="주문 단계"><li>장바구니</li><li aria-current="step">주문/결제</li><li>주문 완료</li></ol>
+            <div id="checkoutBag"></div>
+            <div id="checkoutRoot"></div>
+        </div>
+    </section>
+
+    <!-- 상품 자세히 보기 · 즉시구매 · 장바구니 담기 (코브 몰에서 키링을 누르면 checkout.js가 채워서 엶) -->
+    <dialog class="pd" id="pdDlg" aria-labelledby="pdName">
+        <button class="join-x pd-x" type="button" data-pd-close aria-label="닫기">✕</button>
+        <div class="pd-wrap">
+            <!-- 왼쪽 사진 칸: 큰 사진 → 사진 몇 장 · 상품 소개. 길어지면 창이 스크롤되고 오른쪽 .pd-info(고르기 · 구매 · 리뷰)는 크기 그대로 위에 붙어 있음 (휴대폰은 큰 사진 → 고르기 · 구매 · 리뷰 → 나머지) -->
+            <div class="pd-pic">
+                <div class="pd-hero"><span class="kr-paper" aria-hidden="true"></span><img id="pdImg" alt="" width="300" height="300"></div>
+                <div class="pd-more">
+                    <!-- 사진 몇 장 (checkout.js가 mall.js PRODUCTS의 shots로 채움, 없으면 빈 사진 자리) -->
+                    <div class="pd-shots" id="pdShots"></div>
+                    <p class="fine" data-pd-shots-todo>사진은 아직 자리만 있어요 (✏️ mall.js PRODUCTS의 shots에 사진 경로를 직접 넣으세요)</p>
+                    <section class="pd-story" aria-labelledby="pdStoryTitle">
+                        <h3 id="pdStoryTitle">상품 소개</h3>
+                        <div class="pd-story-text" id="pdStory"></div>
+                        <p class="fine" data-pd-story-todo>지금은 짧은 소개만 있어요 (✏️ mall.js PRODUCTS의 story에 소개 글을 직접 수정하세요)</p>
+                    </section>
+                </div>
+            </div>
+            <div class="pd-info">
+                <p class="eyebrow">COVV MALL</p>
+                <h2 id="pdName"></h2>
+                <p class="pd-desc" id="pdDesc"></p>
+                <p class="pd-price"><b id="pdPrice"></b>원</p>
+                <ul class="pd-meta">
+                    <li><span>할인</span><b id="pdCoupon"></b></li>
+                    <li><span>배송비</span><b id="pdShip"></b></li>
+                </ul>
+                <!-- 색상 · 캐릭터 선택: 그 키링의 종류마다 사진 칸 75×75 (checkout.js가 mall.js OPTIONS로 채움, 고르면 제목 이름 · 사진 색종이가 그 종류로) -->
+                <div class="pd-opts" role="group" aria-labelledby="pdOptTitle"><span id="pdOptTitle">색상 · 캐릭터 선택</span><div class="pd-opt-list" id="pdOpts"></div></div>
+                <div class="pd-qty"><span>수량</span><div class="qty"><button type="button" data-qty="-1" aria-label="하나 빼기">−</button><output id="pdQty" aria-label="수량">1</output><button type="button" data-qty="1" aria-label="하나 더하기">+</button></div></div>
+                <p class="pd-total"><span>총 상품 금액</span><b id="pdTotal"></b></p>
+                <div class="pd-btns"><button type="button" class="pd-cart" data-pd-cart>장바구니 담기</button><button type="button" class="pd-buy" data-pd-buy>즉시구매</button></div>
+                <p class="pd-added" data-pd-added hidden><span></span><button type="button" class="join-link" data-cart>장바구니 보기</button></p>
+                <p class="sr-only" data-pd-live role="status"></p>
+                <p class="fine">가격은 예시예요 (✏️ mall.js PRODUCTS의 price를 직접 수정하세요) · 결제는 코브 몰이 문을 열면 시작해요</p>
+                <!-- 리뷰: 한 장씩 1.5초 동안 넘어가고 2초 쉬는 카드 (Swiper speed 1500처럼) — 끌어서 · ‹ › 로도 넘기고, 마우스를 올리거나 ⏸를 누르면 멈춤 (카드는 checkout.js가 채움. ✏️ 지금은 카드마다 '예시' 표시가 붙은 예시 10개 → 문을 열면 산 분이 쓴 실제 리뷰로) -->
+                <section class="pd-review" aria-labelledby="pdReviewTitle">
+                    <div class="pd-rv-head">
+                        <h3 id="pdReviewTitle">리뷰 <span class="pd-rv-count" data-rv-count></span></h3>
+                        <div class="pd-rv-ctrl"><button class="pd-rv-btn" type="button" data-rv="-1" aria-label="이전 리뷰">‹</button><button class="pd-rv-btn pd-rv-play" type="button" data-rv-play aria-pressed="false" aria-label="리뷰 자동 넘김 멈춤"></button><button class="pd-rv-btn" type="button" data-rv="1" aria-label="다음 리뷰">›</button></div>
+                    </div>
+                    <div class="pd-rv"><ul class="pd-rv-track" id="pdReviews"></ul></div>
+                    <div class="pd-rv-dots" data-rv-dots aria-hidden="true"></div>
+                    <p class="pd-review-empty" data-rv-empty hidden><span aria-hidden="true">📝</span>아직 리뷰가 없어요</p>
+                </section>
+            </div>
+        </div>
+    </dialog>
+
     <!-- 알림 (첫 방문 선물 등) -->
     <div class="covv-toast" id="covvToast" role="status" aria-live="polite"></div>
 
-    <!-- 코브 몰 계정 만들기 창 (myoffice.js가 엶) — 닉네임만 받음, 이름·연락처 같은 개인정보는 받지 않음 -->
+    <!-- 코브 몰 회원가입 창 (myoffice.js가 엶) — 로그인 아이디(영문+숫자)·비밀번호와 닉네임만 받음, 이름·연락처 같은 개인정보는 받지 않음 -->
     <dialog class="join" id="joinDlg" aria-labelledby="joinTitle">
         <form class="join-form" id="joinForm" novalidate>
             <button type="button" class="join-x" data-join-close aria-label="닫기">✕</button>
             <div class="join-cove" id="joinCove" aria-hidden="true"></div>
-            <h2 id="joinTitle">코브 몰 계정 만들기</h2>
-            <p class="join-lead">닉네임만 정하면 끝! 들판의 내 코브가 이 이름으로 불려요.</p>
+            <h2 id="joinTitle">코브 몰 회원가입</h2>
+            <p class="join-lead">아이디·비밀번호로 로그인하고, 들판의 내 코브는 내가 지은 닉네임으로 불려요.</p>
+            <p class="join-warn" id="joinWarn" hidden>⚠️ 이 브라우저에는 이미 계정이 하나 있어요. 새로 가입하면 원래 계정의 프로필·다이어리·최근 소식이 지워지고, 가방(금화·아이템)과 코브 색은 남아요.</p>
+            <label for="joinId">아이디</label>
+            <input id="joinId" maxlength="16" autocomplete="username" autocapitalize="off" spellcheck="false" aria-describedby="joinIdHelp joinErr">
+            <p class="fine" id="joinIdHelp">4~16자 · 영문과 숫자를 섞어서 (예: covv123) · 로그인할 때만 쓰고 가입한 뒤엔 바꿀 수 없어요</p>
+            <label for="joinPw">비밀번호</label>
+            <input id="joinPw" type="password" maxlength="64" autocomplete="new-password" aria-describedby="joinPwHelp joinErr">
+            <label for="joinPw2">비밀번호 한 번 더</label>
+            <input id="joinPw2" type="password" maxlength="64" autocomplete="new-password" aria-describedby="joinErr">
+            <p class="fine" id="joinPwHelp">8자 이상 · 다른 사이트에서 쓰는 비밀번호는 피해 주세요 · 글자 그대로가 아니라 되돌릴 수 없는 값(해시)으로 이 브라우저에만 저장돼요</p>
             <label for="joinNick">닉네임</label>
-            <input id="joinNick" maxlength="12" autocomplete="off" spellcheck="false" aria-describedby="joinHelp joinErr">
+            <input id="joinNick" maxlength="12" autocomplete="nickname" spellcheck="false" aria-describedby="joinHelp joinErr">
+            <p class="fine" id="joinHelp">2~12자 · 한글·영문·숫자·띄어쓰기로 마음대로 지어 주세요 (_ . · - 도 돼요) · 들판 이름표에 보이고 나중에 바꿀 수 있어요 · 이름·연락처는 받지 않아요</p>
             <p class="join-err" id="joinErr" role="alert"></p>
-            <p class="fine" id="joinHelp">2~12자 · 한글·영문·숫자 · 이름·연락처는 받지 않아요</p>
-            <button type="submit" class="mh-btn">✨ 계정 만들기</button>
+            <button type="submit" class="mh-btn">✨ 회원가입</button>
+            <p class="join-switch">이미 계정이 있나요? <button type="button" class="join-link" data-to-login>로그인</button></p>
             <p class="join-or">또는</p>
             <button type="button" class="mh-btn kakao" disabled>카카오로 로그인 · 준비 중</button>
             <p class="fine">계정은 이 브라우저에 저장돼요. 카카오 로그인이 열리면 그대로 옮겨서 다른 기기에서도 이어 쓸 수 있어요.</p>
         </form>
     </dialog>
 
+    <!-- 코브 몰 로그인 창 (myoffice.js가 엶) — 이 브라우저 계정에 아이디 + 비밀번호로 -->
+    <dialog class="join" id="loginDlg" aria-labelledby="loginTitle">
+        <form class="join-form" id="loginForm" novalidate>
+            <button type="button" class="join-x" data-join-close aria-label="닫기">✕</button>
+            <div class="join-cove" id="loginCove" aria-hidden="true"></div>
+            <h2 id="loginTitle">코브 몰 로그인</h2>
+            <p class="join-lead">아이디와 비밀번호를 적어 주세요.</p>
+            <label for="loginId">아이디</label>
+            <input id="loginId" maxlength="16" autocomplete="username" autocapitalize="off" spellcheck="false" aria-describedby="loginErr">
+            <label for="loginPw">비밀번호</label>
+            <input id="loginPw" type="password" maxlength="64" autocomplete="current-password" aria-describedby="loginErr">
+            <p class="join-err" id="loginErr" role="alert"></p>
+            <button type="submit" class="mh-btn">로그인</button>
+            <p class="join-switch">아직 계정이 없나요? <button type="button" class="join-link" data-to-join>회원가입</button></p>
+            <details class="join-forgot">
+                <summary>아이디·비밀번호를 잊었어요</summary>
+                <p class="fine">이 브라우저에만 있는 계정이라 아이디·비밀번호를 되찾을 수 없어요. 계정을 지우고 새로 만들 수 있어요 — 프로필·다이어리·최근 소식은 지워지고, 가방(금화·아이템)과 코브 색은 남아요.</p>
+                <button type="button" class="mh-btn ghost small" data-reset>계정 지우고 새로 시작</button>
+                <div class="join-confirm" data-reset-ask hidden>
+                    <p>정말 지울까요? 되돌릴 수 없어요.</p>
+                    <button type="button" class="mh-btn danger small" data-reset-yes>지우기</button>
+                    <button type="button" class="mh-btn ghost small" data-reset-no>취소</button>
+                </div>
+            </details>
+        </form>
+    </dialog>
+    <!-- 위로 가기 (소개 · 작업물 · 내 오피스 · 코브 몰을 내리면 바로 나타나고, 누르면 그 화면 맨 위로 — screens.js) -->
+    <button class="go-top" type="button" aria-label="맨 위로"></button>
+
     <!-- 화면 전환용 동그라미 -->
     <div class="iris" id="iris" aria-hidden="true"><span>🐾</span></div>
 
     <!-- ?v=날짜 : 파일을 고치면 숫자를 바꿔야 방문자 브라우저가 옛 파일(캐시) 대신 새 파일을 받음 (style.css·screens.js 안 office.js도 같이) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js" integrity="sha512-334uBDwY0iZ2TklV1OtDtBW9vp7jjP7SWRzT7Ehu1fdtPIjTpCwTSFb8HI/YBau9L1/kRBEOALrS229Kry4yFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="checkout-rules.js?v=1002a"></script>
-    <script src="mall.js?v=1002a"></script>
-    <script src="field.js?v=1002a"></script>
-    <script src="myoffice.js?v=1002a"></script>
-    <script src="screens.js?v=1002a"></script>
-    <script src="visitors.js?v=1002a"></script>
+    <script src="checkout-rules.js?v=1006l"></script>
+    <script src="mall.js?v=1006l"></script>
+    <script src="checkout.js?v=1006l"></script>
+    <script src="hero.js?v=1006l"></script>
+    <script src="field.js?v=1006l"></script>
+    <script src="myoffice.js?v=1006l"></script>
+    <script src="screens.js?v=1006l"></script>
+    <script src="visitors.js?v=1006l"></script>
 </body>
 </html>
