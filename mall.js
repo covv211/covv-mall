@@ -474,7 +474,7 @@ function coveSVG(color,variant,opts={}){   // opts.plain: 고리·아크릴 테�
 
 /* ══════════ 코브 몰 화면 ══════════ */
 // 진열대: 한정판(그린 코브, 들판 무지개 코브와 이어짐)은 맨 위 카드, 나머지는 배경 지운 키링 사진(images/stall 300×300)을 종이로 오려 붙인 모양
-// (지금 사진 20장은 테스트용 남의 상품 → 공개 전 실제 상품 사진·이름으로 바꿀 것. 하트 기록은 id로 남으니 id는 상품마다 새로. 들판 가판대는 앞 5장만 field.js에 따로)
+// (지금 사진 20장 중 비숑 아크릴(keyring-21, 2026-11-09 주인님 사진) 말고는 테스트용 남의 상품 → 공개 전 실제 상품 사진·이름으로 바꿀 것. 하트 기록은 id로 남으니 id는 상품마다 새로. 들판 가판대는 앞 5장만 field.js에 따로)
 // 진열 순서 = '추천' 정렬. sold·reviews는 '판매량'·'리뷰 많은' 정렬에만 쓰는 예시 숫자(화면엔 안 보임), day = 진열대에 올린 날('NEW' 정렬)
 // 상품 창 큰 사진 아래: shots:['images/…'] = 사진 몇 장(차례로), story:'…' = 상품 소개 글(\n = 문단 나눔). 없으면 빈 사진 자리 · 짧은 소개(desc)만 (✏️ 직접 넣으세요, OPTIONS 종류마다 따로 줘도 됨)
 const PRODUCTS=[
@@ -485,7 +485,7 @@ const PRODUCTS=[
   {id:'dino',      name:'초록 공룡 키링',     img:'images/stall/keyring-4.webp',  paper:'#8fe3c4', price:9000,  sold:210, reviews:37, day:'2026-10-2',            desc:'볼이 발그레한 초록 공룡 아크릴 키링.'},
   {id:'fox',       name:'무지개 여우 키링',   img:'images/stall/keyring-5.webp',  paper:'#8cc8ff', price:13000, sold:74,  reviews:33, day:'2026-10-2', tag:'NEW', desc:'버섯·클로버 참을 단 알록달록 펠트 여우.'},
   {id:'flower5',   name:'5잎 솜 키링',        img:'images/stall/keyring-6.webp',  paper:'#9fe0b0', price:12000, sold:88,  reviews:19, day:'2026-10-5',            desc:'폭신한 검정 꽃잎 다섯 장에 초록 받침을 댄 솜 키링.'},
-  {id:'leatherdog',name:'가죽 강아지 키링',   img:'images/stall/keyring-7.webp',  paper:'#ffc08a', price:14000, sold:47,  reviews:15, day:'2026-10-5',            desc:'주황 가죽 강아지와 땋은 가죽 고리.'},
+  {id:'bichon',    name:'흰 비숑 아크릴 키링', img:'images/stall/keyring-21.webp', paper:'#ffc08a', price:14000, sold:47,  reviews:15, day:'2026-11-9', tag:'NEW', desc:'복슬복슬 흰 비숑이 앞발을 내민 투명 아크릴 키링.'},
   {id:'clover',    name:'네잎클로버 키링',    img:'images/stall/keyring-8.webp',  paper:'#c9e89a', price:9000,  sold:163, reviews:28, day:'2026-10-5',            desc:'매트한 검정 네잎클로버에 주황 가죽 태그를 달았어요.'},
   {id:'metalkuma', name:'메탈 쿠마 키링',     img:'images/stall/keyring-9.webp',  paper:'#c9c6cf', price:15000, sold:69,  reviews:22, day:'2026-10-5',            desc:'은빛 메탈 곰과 검정 땋은 끈 고리.'},
   {id:'blackcat',  name:'블랙캣 키링',        img:'images/stall/keyring-10.webp', paper:'#ffd9a8', price:16000, sold:121, reviews:52, day:'2026-10-5',            desc:'빨간 줄무늬 목도리를 두른 털복숭이 검은 고양이 인형.'},
@@ -542,7 +542,7 @@ const OPTIONS={
 };
 // 진열대 정렬 탭 [키, 이름] — '추천' = PRODUCTS 순서 그대로, 같은 값끼리도 추천 순서를 지킴
 const SORTS=[['pick','추천'],['low','낮은가격'],['high','높은가격'],['review','리뷰 많은'],['sold','판매량'],['new','NEW']];
-const RETIRED={pink:'분홍 코브 키링',sky:'하늘 코브 키링',mint:'민트 코브 키링',lav:'라벤더 코브 키링',para:'낙하산 코브 키링',bubble:'거품 속 코브 키링'};   // 진열대에서 내려간 상품 이름 (하트 기록이 남아 있어 내 오피스 '응원한 키링' 목록에 씀)
+const RETIRED={pink:'분홍 코브 키링',sky:'하늘 코브 키링',mint:'민트 코브 키링',lav:'라벤더 코브 키링',para:'낙하산 코브 키링',bubble:'거품 속 코브 키링',leatherdog:'가죽 강아지 키링'};   // 진열대에서 내려간 상품 이름 (하트 기록이 남아 있어 내 오피스 '응원한 키링' 목록에 씀)
 const VOTES=[
   {id:'sleepy', name:'잠꾸러기 코브', color:'#c3a6ff', variant:'sleepy', desc:'눈 감고 쿨쿨'},
   {id:'scarf',  name:'목도리 코브',   color:'#ffb98a', variant:'scarf',  desc:'겨울에 어울리는'},
