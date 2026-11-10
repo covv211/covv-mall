@@ -85,7 +85,7 @@ function goCheckout(mode,items){
 
 /* ══════════ 상품 창 (즉시구매 · 장바구니 담기) ══════════ */
 const dlg=document.getElementById('pdDlg');
-let pdId=null, pdQty=1, pdDownOut=false;
+let pdId=null, pdQty=1;
 const $d=s=>dlg.querySelector(s);
 // 색상 · 캐릭터 선택 칸: 연 상품의 종류마다 75×75 사진 버튼 (칸 바탕 = 그 종류의 색종이를 옅게). 다른 상품을 열 때만 다시 만듦
 const optBox=dlg&&dlg.querySelector('#pdOpts');
@@ -333,9 +333,8 @@ function paintPd(){
 }
 function closePd(){ if(dlg&&dlg.open) dlg.close(); }
 if(dlg){
-  dlg.addEventListener('pointerdown',e=>{ pdDownOut=e.target===dlg; });   // 소개 글자를 끌어 고르다 배경에서 놓으면 click이 창으로 와서 닫혀 버림 → 배경에서 누른 것만
   dlg.addEventListener('click',e=>{
-    if((e.target===dlg&&pdDownOut)||e.target.closest('[data-pd-close]')){ closePd(); return; }   // 바깥(배경)이나 ✕를 누르면 닫힘
+    if(e.target.closest('[data-pd-close]')){ closePd(); return; }   // ✕를 눌러야만 닫힘 — 바깥(배경)을 눌러도 안 닫힘 (주인님 11-10: 회원가입 창과 같게)
     const tp=e.target.closest('[data-tip]'); if(tp){ openTip(tp.dataset.tip); return; }   // 혜택 줄의 ⓘ → 안내 창
     if(e.target.closest('[data-pd-share]')){ sharePd(); return; }   // 가격 옆 🔗 공유
     if(e.target.closest('[data-rv-write]')){ openWrite(); return; }   // 리뷰 '리뷰 쓰기'
