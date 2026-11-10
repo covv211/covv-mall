@@ -27,8 +27,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Hahmlet:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
     <!-- 외부 파일의 integrity = 원본 파일의 지문. 누가 CDN 파일을 바꿔치기하면 지문이 달라져서 브라우저가 실행하지 않음 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" integrity="sha384-uR1wgObmx89ZQ4VVXHdzjbDJZ1PvBK01K+E3GebmaBKdZ87qRJvBWPoPbzWeEd5T" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="stylesheet" href="default.css?v=1110c">
-    <link rel="stylesheet" href="style.css?v=1110c">
+    <link rel="stylesheet" href="default.css?v=1110e">
+    <link rel="stylesheet" href="style.css?v=1110e">
 </head>
 <body>
 
@@ -376,9 +376,12 @@
                 <h2 id="pdName"></h2>
                 <p class="pd-desc" id="pdDesc"></p>
                 <p class="pd-price"><b id="pdPrice"></b>원 <span class="pd-soon">오픈 준비 중 · 예시 가격</span></p>
+                <!-- 혜택 줄: ⓘ를 누르면 그 안내 창이 상품 창 위에 뜸 (아래 dialog.tip — 멘케트 상품 상세의 신규 가입 혜택 · 카드 혜택 · 배송 정보 창, checkout.js) -->
                 <ul class="pd-meta">
                     <li><span>할인</span><b id="pdCoupon"></b></li>
-                    <li><span>배송비</span><b id="pdShip"></b></li>
+                    <li><span>가입 혜택</span><b>가입하면 들판 이름표에 내 닉네임</b><button class="pd-tip" type="button" data-tip="tipJoin" aria-haspopup="dialog" aria-label="신규 가입 혜택 안내">i</button></li>
+                    <li><span>카드 혜택</span><b>결제가 열리면 안내해요</b><button class="pd-tip" type="button" data-tip="tipCard" aria-haspopup="dialog" aria-label="카드 혜택 안내">i</button></li>
+                    <li><span>배송비</span><b id="pdShip"></b><button class="pd-tip" type="button" data-tip="tipShip" aria-haspopup="dialog" aria-label="배송 정보 안내">i</button></li>
                 </ul>
                 <!-- 색상 · 캐릭터 선택: 그 키링의 종류마다 사진 칸 75×75 (checkout.js가 mall.js OPTIONS로 채움, 고르면 제목 이름 · 사진 색종이가 그 종류로) -->
                 <div class="pd-opts" role="group" aria-labelledby="pdOptTitle"><span id="pdOptTitle">색상 · 캐릭터 선택</span><div class="pd-opt-list" id="pdOpts"></div></div>
@@ -403,6 +406,96 @@
                 </section>
             </div>
         </div>
+    </dialog>
+
+    <!-- 상품 창 위에 뜨는 안내 창 3개: 멘케트 상품 상세의 신규 가입 혜택 · 카드 혜택 · 배송 정보 창(머리 · 요약 상자 · 표 · 꼭 확인해 주세요 · 버튼 줄)을 코브 몰 모양으로
+         내용은 코브 몰 규칙대로 — 할인은 키링 1개당 최대 100원이라 '신규 회원 10% 쿠폰'은 없음, 결제 · 배송 정책은 정해지기 전이라 정해진 것만 적고 나머지는 '판매를 시작할 때'
+         숫자(data-r = checkout-rules.js 값) · 내 계정 상태 · 이 키링의 배송비는 checkout.js가 열 때마다 채움 -->
+    <dialog class="tip" id="tipJoin" aria-labelledby="tipJoinTitle">
+        <div class="tip-head"><h2 id="tipJoinTitle">신규 가입 혜택</h2><button class="join-x" type="button" data-tip-close aria-label="신규 가입 혜택 닫기">✕</button></div>
+        <div class="tip-body">
+            <div class="tip-hero">
+                <p class="tip-eyebrow">코브 몰 회원</p>
+                <p class="tip-title" data-tip-join-title>가입하면 들판의 내 코브가 <strong>내 닉네임</strong>을 달아요</p>
+                <p class="tip-sub">이름 · 연락처 없이 아이디 · 닉네임 · 비밀번호만으로 가입해요</p>
+            </div>
+            <dl class="tip-terms">
+                <div><dt>이름표</dt><dd>들판을 걷는 내 코브 머리 위에 닉네임</dd></div>
+                <div><dt>내 오피스</dt><dd>로그아웃하면 내 미니홈피를 가려 둬요</dd></div>
+                <div><dt>받는 정보</dt><dd>아이디 · 닉네임 · 비밀번호 (개인정보는 받지 않아요)</dd></div>
+                <div><dt>저장 위치</dt><dd>이 브라우저 (서버로 보내지 않아요)</dd></div>
+                <div><dt>가입비</dt><dd>무료</dd></div>
+            </dl>
+            <section class="tip-notice" aria-labelledby="tipJoinNotice">
+                <h3 id="tipJoinNotice">꼭 확인해 주세요</h3>
+                <ul>
+                    <li>계정은 이 브라우저에만 있어요. 다른 기기 · 브라우저에서는 보이지 않아요.</li>
+                    <li>사이트 기록(쿠키)을 지우거나 시크릿 창을 쓰면 계정도 같이 사라져요.</li>
+                    <li>비밀번호는 알아볼 수 없게 바꿔서 저장해요.</li>
+                    <li>금화 쿠폰은 가입하지 않아도 모을 수 있어요. 금화 <span data-r="COUPON_COINS">100</span>개 = 키링 1개 <span data-r="COUPON_WON">100</span>원 할인.</li>
+                </ul>
+            </section>
+        </div>
+        <div class="tip-actions">
+            <button type="button" class="tip-btn ghost" data-tip-close>닫기</button>
+            <button type="button" class="tip-btn" data-tip-join>회원가입</button>
+        </div>
+    </dialog>
+    <dialog class="tip" id="tipCard" aria-labelledby="tipCardTitle">
+        <div class="tip-head"><h2 id="tipCardTitle">카드 혜택</h2><button class="join-x" type="button" data-tip-close aria-label="카드 혜택 닫기">✕</button></div>
+        <div class="tip-body">
+            <div class="tip-hero soon">
+                <div>
+                    <p class="tip-title">아직 카드 혜택이 없어요</p>
+                    <p class="tip-sub">결제가 열리면 카드사별 무이자 할부를 여기에 적어 둘게요</p>
+                </div>
+                <strong class="tip-big">준비 중</strong>
+            </div>
+            <section class="tip-sec" aria-labelledby="tipCardPay">
+                <h3 id="tipCardPay">결제 안내</h3>
+                <dl class="tip-terms">
+                    <div><dt>결제</dt><dd>코브 몰이 문을 열면 시작해요</dd></div>
+                    <div><dt>카드 · 간편결제</dt><dd>결제 서비스가 정해지면 안내해요</dd></div>
+                    <div><dt>무이자 할부</dt><dd>정해지면 카드사별로 이 창에 적어요</dd></div>
+                    <div><dt>금화 쿠폰</dt><dd>카드와 상관없이 키링 1개당 최대 <span data-r="COUPON_WON">100</span>원</dd></div>
+                </dl>
+            </section>
+            <section class="tip-notice" aria-labelledby="tipCardNotice">
+                <h3 id="tipCardNotice">꼭 확인해 주세요</h3>
+                <ul>
+                    <li>지금은 주문서를 미리 볼 수만 있고 돈은 나가지 않아요.</li>
+                    <li>지금 보이는 가격과 리뷰는 예시예요.</li>
+                </ul>
+            </section>
+            <p class="fine todo">✏️ 결제 서비스와 카드사 무이자 할부가 정해지면 이 창(covv.html #tipCard)에 카드사별 표를 직접 채우세요</p>
+        </div>
+        <div class="tip-actions"><button type="button" class="tip-btn" data-tip-close>확인</button></div>
+    </dialog>
+    <dialog class="tip" id="tipShip" aria-labelledby="tipShipTitle">
+        <div class="tip-head"><h2 id="tipShipTitle">배송 정보</h2><button class="join-x" type="button" data-tip-close aria-label="배송 정보 닫기">✕</button></div>
+        <div class="tip-body">
+            <div class="tip-hero">
+                <p class="tip-title" data-tip-ship-lead></p>
+                <p class="tip-sub" data-tip-ship-sub></p>
+            </div>
+            <section class="tip-sec" aria-labelledby="tipShipGo">
+                <h3 id="tipShipGo">배송</h3>
+                <dl class="tip-terms">
+                    <div><dt>배송비</dt><dd><span data-r="SHIP_FREE">30,000</span>원 이상 무료, 미만 <span data-r="SHIP_FEE">3,000</span>원 (예시)</dd></div>
+                    <div><dt>추가 배송비</dt><dd>제주 · 도서산간은 판매를 시작할 때 안내해요</dd></div>
+                    <div><dt>출고 · 도착</dt><dd>판매를 시작할 때 택배사와 함께 적어요</dd></div>
+                </dl>
+            </section>
+            <section class="tip-sec" aria-labelledby="tipShipBack">
+                <h3 id="tipShipBack">교환 · 반품</h3>
+                <dl class="tip-terms">
+                    <div><dt>기간 · 배송비</dt><dd>판매를 시작할 때 적어요</dd></div>
+                    <div><dt>문의</dt><dd>문의 창구는 준비 중이에요</dd></div>
+                </dl>
+            </section>
+            <p class="fine todo">✏️ 택배사 · 출고 기간 · 추가 배송비 · 교환/반품 기간과 배송비가 정해지면 직접 채우세요 (배송비 숫자는 checkout-rules.js의 SHIP_FEE · SHIP_FREE)</p>
+        </div>
+        <div class="tip-actions"><button type="button" class="tip-btn" data-tip-close>확인</button></div>
     </dialog>
 
     <!-- 알림 (첫 방문 선물 등) -->
@@ -470,13 +563,13 @@
 
     <!-- ?v=날짜 : 파일을 고치면 숫자를 바꿔야 방문자 브라우저가 옛 파일(캐시) 대신 새 파일을 받음 (style.css·screens.js 안 office.js도 같이) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js" integrity="sha512-334uBDwY0iZ2TklV1OtDtBW9vp7jjP7SWRzT7Ehu1fdtPIjTpCwTSFb8HI/YBau9L1/kRBEOALrS229Kry4yFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="checkout-rules.js?v=1110c"></script>
-    <script src="mall.js?v=1110c"></script>
-    <script src="checkout.js?v=1110c"></script>
-    <script src="hero.js?v=1110c"></script>
-    <script src="field.js?v=1110c"></script>
-    <script src="myoffice.js?v=1110c"></script>
-    <script src="screens.js?v=1110c"></script>
-    <script src="visitors.js?v=1110c"></script>
+    <script src="checkout-rules.js?v=1110e"></script>
+    <script src="mall.js?v=1110e"></script>
+    <script src="checkout.js?v=1110e"></script>
+    <script src="hero.js?v=1110e"></script>
+    <script src="field.js?v=1110e"></script>
+    <script src="myoffice.js?v=1110e"></script>
+    <script src="screens.js?v=1110e"></script>
+    <script src="visitors.js?v=1110e"></script>
 </body>
 </html>

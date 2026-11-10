@@ -273,6 +273,7 @@ if(dlg){
   dlg.addEventListener('pointerdown',e=>{ pdDownOut=e.target===dlg; });   // 소개 글자를 끌어 고르다 배경에서 놓으면 click이 창으로 와서 닫혀 버림 → 배경에서 누른 것만
   dlg.addEventListener('click',e=>{
     if((e.target===dlg&&pdDownOut)||e.target.closest('[data-pd-close]')){ closePd(); return; }   // 바깥(배경)이나 ✕를 누르면 닫힘
+    const tp=e.target.closest('[data-tip]'); if(tp){ openTip(tp.dataset.tip); return; }   // 혜택 줄의 ⓘ → 안내 창
     const o=e.target.closest('[data-pd-opt]');
     if(o){ const p=byId(o.dataset.pdOpt); if(p&&p.id!==pdId){ fillPd(p); const img=$d('#pdImg'); img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap'); } return; }   // 종류가 바뀐 걸 알게 사진이 살짝 톡
     const rv=e.target.closest('[data-rv]'); if(rv){ rvStep(Number(rv.dataset.rv)); return; }   // 리뷰 ‹ ›
@@ -290,8 +291,48 @@ if(dlg){
     if(e.target.closest('[data-pd-buy]')) goCheckout('now',[{id:pdId,qty:pdQty}]);
   });
   // Esc는 창만 닫고 코브 몰 화면은 그대로 — screens.js(나중에 불러옴)의 Esc = 화면 닫기보다 먼저 받음. 창 안 글자를 누르거나 버튼이 꺼져 포커스가 body로 빠져도
-  addEventListener('keydown',e=>{ if(e.key==='Escape'&&!e.isComposing&&dlg.open){ e.preventDefault(); closePd(); } });
+  // 안내 창이 떠 있으면 그 창만 닫음 · 회원가입 창처럼 먼저 Esc를 받아 닫은 창이 있으면(defaultPrevented) 상품 창은 그대로
+  addEventListener('keydown',e=>{
+    if(e.key!=='Escape'||e.isComposing||e.defaultPrevented) return;
+    const t=tips.find(x=>x.open);
+    if(t){ e.preventDefault(); t.close(); return; }
+    if(dlg.open){ e.preventDefault(); closePd(); }
+  });
 }
+
+/* ── 상품 창 위 안내 창: 신규 가입 혜택 · 카드 혜택 · 배송 정보 (멘케트 상품 상세 안내 창을 코브 몰 규칙대로, covv.html dialog.tip) ──
+   열 때마다 지금 상태로 채움: 규칙 숫자(data-r) · 내 계정(가입 전 · 로그아웃 · 로그인 중) · 지금 고른 수량의 배송비 */
+const tips=[...document.querySelectorAll('dialog.tip')];
+const tipJoinTitle=document.querySelector('[data-tip-join-title]'), TIP_JOIN_TITLE=tipJoinTitle?tipJoinTitle.innerHTML:'';   // 처음 문구(코드 상수) — 로그인 중 문구에서 되돌릴 때
+let tipDownOut=false;
+function paintTip(t){
+  t.querySelectorAll('[data-r]').forEach(s=>{ const v=R[s.dataset.r]; if(typeof v==='number') s.textContent=v.toLocaleString('ko-KR'); });
+  if(t.id==='tipJoin'){
+    const on=W.signedIn(), b=t.querySelector('[data-tip-join]');
+    if(on) tipJoinTitle.textContent=`${W.profile().name} 님은 이미 코브 몰 회원이에요`;   // 닉네임은 손님이 쓴 글자 → textContent
+    else tipJoinTitle.innerHTML=TIP_JOIN_TITLE;
+    b.hidden=on; b.textContent=W.member()?'로그인':'회원가입';   // 로그아웃한 계정이 있으면 로그인 창 (한 브라우저에 계정 하나)
+    t.querySelector('.tip-btn.ghost').textContent=on?'확인':'닫기';
+  }
+  if(t.id==='tipShip'){
+    const p=byId(pdId), sum=p?p.price*pdQty:0, free=sum>=R.SHIP_FREE;
+    t.querySelector('[data-tip-ship-lead]').textContent=free?`이 키링 ${pdQty}개는 배송비가 무료예요`:`이 키링은 배송비 ${won(R.SHIP_FEE)}이에요`;
+    t.querySelector('[data-tip-ship-sub]').textContent=free?`상품 ${won(R.SHIP_FREE)} 이상이라 무료 · 숫자는 예시예요`:`${won(R.SHIP_FREE-sum)} 더 담으면 배송비 무료 · 숫자는 예시예요`;
+  }
+}
+function openTip(id){
+  const t=document.getElementById(id);
+  if(!t||!t.showModal||t.open) return;
+  paintTip(t); t.showModal();
+  t.querySelector('.tip-body').scrollTop=0;
+}
+tips.forEach(t=>{
+  t.addEventListener('pointerdown',e=>{ tipDownOut=e.target===t; });   // 창 안 글자를 끌다 배경에서 놓아도 닫히지 않게 (상품 창과 같음)
+  t.addEventListener('click',e=>{
+    if((e.target===t&&tipDownOut)||e.target.closest('[data-tip-close]')){ t.close(); return; }   // 바깥(배경) · ✕ · 닫기 · 확인
+    if(e.target.closest('[data-tip-join]')){ t.close(); if(window.covvJoin) window.covvJoin(); }   // 안내 창을 닫고 회원가입(또는 로그인) 창 — 상품 창은 뒤에 그대로
+  });
+});
 
 // 코브 몰: 오린 사진 · '자세히 · 구매' → 상품 창, '🛒 장바구니' → 주문서 (상품 창 안의 '장바구니 보기'도)
 document.addEventListener('click',e=>{

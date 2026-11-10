@@ -383,7 +383,7 @@ body.screen-open .field { visibility: hidden; }
 .bag-hud:focus-visible, .kr-btn:focus-visible, .sw:focus-visible, .nav-acct:focus-visible, .sns-link:focus-visible, .join-x:focus-visible, .join-link:focus-visible, .join-forgot summary:focus-visible, .privacy-note a:focus-visible, .pv-sec a:focus-visible,
 .kr-pic:focus-visible, .kr-buy.go:focus-visible, .mall-sort button:focus-visible, .mall-cart:focus-visible, .qty button:focus-visible, .pd-opt:focus-visible, .pd-cart:focus-visible, .pd-buy:focus-visible, .pd-rv-btn:focus-visible, .co-btn:focus-visible, .co-del:focus-visible, .co-pay-btn:focus-visible, .co-check input:focus-visible, .co-pay input:focus-visible + span,
 .hero-play:focus-visible, .hero-shop:focus-visible, .go-top:focus-visible, .mall-have:focus-visible, .faq summary:focus-visible, .foot-links a:focus-visible,
-.mall-search-x:focus-visible, .mall-search-go:focus-visible, .kr-none-hint:focus-visible, .kr-none-all:focus-visible {
+.mall-search-x:focus-visible, .mall-search-go:focus-visible, .kr-none-hint:focus-visible, .kr-none-all:focus-visible, .pd-tip:focus-visible, .tip-btn:focus-visible {
     outline: 3px solid var(--accent);
     outline-offset: 2px;
 }
@@ -848,9 +848,46 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
 .pd-price b { font-size: 30px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .pd-soon { display: inline-block; margin-left: 6px; padding: 2px 9px 3px; border-radius: 999px; font-size: 12.5px; vertical-align: 5px; }   /* 오픈 전 표시 — 다 담고 결제를 눌러서야 못 산다는 걸 알지 않게 (색은 아래 오픈 전 안내 묶음) */
 .pd-meta { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1.5px dashed var(--line); border-bottom: 1.5px dashed var(--line); font-size: 14px; }
-.pd-meta li { display: flex; gap: 12px; }
-.pd-meta span { flex: none; width: 52px; color: var(--muted); }
-.pd-meta b { font-weight: 600; }
+.pd-meta li { display: flex; align-items: baseline; gap: 12px; }   /* 두 줄이 돼도 이름 · ⓘ는 첫 줄에 맞춤 */
+.pd-meta span { flex: none; width: 64px; color: var(--muted); }   /* '가입 혜택' · '카드 혜택'까지 한 줄 */
+.pd-meta b { font-weight: 600; word-break: keep-all; }
+/* 혜택 줄 끝 ⓘ = 안내 창 열기 (멘케트 상품 상세의 안내 아이콘 자리) — 손가락으로 누르기 쉽게 누르는 곳만 사방 12px 넓힘 */
+.pd-tip { position: relative; flex: none; display: grid; place-items: center; width: 20px; height: 20px; margin-left: -6px; padding: 0; border: 0; border-radius: 50%; background: var(--accent-soft); color: #b0306e; font-family: Georgia, "Times New Roman", serif; font-size: 13px; font-style: italic; font-weight: 700; line-height: 1; cursor: pointer; transition: background .2s, color .2s; }
+.pd-tip::after { content: ""; position: absolute; top: -12px; right: -12px; bottom: -12px; left: -12px; }
+.pd-tip:hover { background: #cc3a82; color: #fff; }
+
+/* ── 상품 창 위 안내 창: 신규 가입 혜택 · 카드 혜택 · 배송 정보 (멘케트 상품 상세 안내 창 — 머리 64 · 요약 상자 · 표 · 꼭 확인해 주세요 · 버튼 줄을 코브 몰 모양으로) ──
+   멘케트처럼 뒤는 25% 딤 + 0.2초 페이드(동작 줄이기여도 페이드는 그대로), 휴대폰은 아래에서 올라오는 시트 */
+.tip { width: min(560px, calc(100% - 32px)); max-height: calc(100% - 32px); margin: auto; padding: 0; border: 0; border-radius: 26px; background: var(--card); color: var(--ink); box-shadow: 0 1px 0 var(--line), 0 24px 60px rgba(60, 20, 50, .28); overflow: hidden; }
+.tip[open] { display: flex; flex-direction: column; animation: joinFade .2s ease-out; }
+.tip::backdrop { background: rgba(40, 20, 40, .25); }   /* 상품 창 딤(45%) 위에 한 겹 더 → 뒤 상품 창이 조금 더 어두워짐 */
+.tip-head { position: relative; flex: none; display: flex; align-items: center; justify-content: center; height: 64px; padding: 0 56px; border-bottom: 1.5px dashed var(--line); }
+.tip-head h2 { font-family: var(--hand); font-size: 26px; font-weight: 700; letter-spacing: -.04em; line-height: 1.1; color: #5b3350; }
+.tip-head .join-x { top: 14px; right: 14px; }
+.tip-body { display: flex; flex-direction: column; gap: 22px; min-height: 0; padding: 24px 28px; overflow-y: auto; overscroll-behavior: contain; }   /* 낮은 화면에선 이 칸만 스크롤 (머리 · 버튼 줄은 그대로) */
+.tip-hero { display: flex; flex-direction: column; gap: 6px; padding: 20px 22px; border-radius: 18px; background: linear-gradient(150deg, #fff6fa, var(--accent-soft)); box-shadow: inset 0 0 0 1.5px #f6d3e3; word-break: keep-all; }   /* 소개 화면 이야기 상자와 같은 분홍 */
+.tip-hero.soon { flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; background: #fff4d6; box-shadow: none; color: #7a5200; }   /* 아직 없는 혜택 = 오픈 준비 안내와 같은 노랑 */
+.tip-eyebrow { color: #b0306e; font-size: 13px; font-weight: 700; }
+.tip-title { font-size: 18px; font-weight: 700; line-height: 1.4; }
+.tip-title strong { color: #b0306e; }
+.tip-sub { color: var(--muted); font-size: 14px; }
+.tip-hero.soon .tip-sub { color: #7a5200; }
+.tip-big { flex: none; font-family: var(--hand); font-size: 26px; font-weight: 700; letter-spacing: -.03em; }
+.tip-sec { display: flex; flex-direction: column; gap: 10px; }
+.tip-sec h3 { font-size: 15.5px; font-weight: 800; }
+.tip-terms { border-top: 1.5px solid var(--ink); }
+.tip-terms div { display: flex; gap: 12px; padding: 10px 2px; border-bottom: 1.5px dashed var(--line); font-size: 14px; }
+.tip-terms dt { flex: none; width: 96px; color: var(--muted); }
+.tip-terms dd { min-width: 0; font-weight: 600; word-break: keep-all; }
+.tip-notice { display: flex; flex-direction: column; gap: 8px; }
+.tip-notice h3 { font-size: 13.5px; font-weight: 800; }
+.tip-notice ul { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.tip-notice li { position: relative; padding-left: 12px; word-break: keep-all; }   /* flex로 두면 글 속 숫자(<span data-r>)가 따로 떨어져 '100 개'처럼 벌어짐 */
+.tip-notice li::before { content: "·"; position: absolute; top: 0; left: 2px; }
+.tip-actions { flex: none; display: flex; gap: 8px; padding: 14px 28px 20px; border-top: 1.5px dashed var(--line); }
+.tip-btn { flex: 1; padding: 14px 10px; border: 0; border-radius: 14px; background: #cc3a82; color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; }   /* 상품 창 '즉시구매' · '장바구니 담기'와 같은 단추 */
+.tip-btn.ghost { background: var(--card); box-shadow: inset 0 0 0 1.5px #cc3a82; color: #b0306e; }
+.tip-btn[hidden] { display: none; }
 .pd-opts { display: flex; flex-direction: column; gap: 10px; font-size: 15px; font-weight: 700; }   /* 색상 · 캐릭터 선택: 그 키링의 종류마다 사진 칸 75×75, 5개가 한 줄 */
 .pd-opts[hidden] { display: none; }   /* 종류가 하나뿐인 상품 */
 .pd-opt-list { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1242,7 +1279,15 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
     .nav nav a { padding: 9px 0; }   /* 메뉴 글자 사이가 좁아 옆 메뉴가 눌리기 쉬움 → 누르는 높이만 늘림 (옆 여백을 주면 메뉴 5개 + 👤가 한 줄에 안 들어감) */
     .mh-form input, .acct-pw input, .mh-diary-form textarea { font-size: 16px; }   /* 16px보다 작으면 아이폰이 누를 때 화면을 확대함 */
     .foot-brand span { display: block; margin: 2px 0 0; }
+    /* 상품 창 위 안내 창: 아래에서 올라오는 시트 (단추가 엄지 닿는 곳에) */
+    .tip { width: 100%; max-width: none; max-height: calc(100% - 48px); margin: auto 0 0; border-radius: 24px 24px 0 0; }
+    .tip[open] { animation: tipUp .26s ease-out; }
+    .tip-body { padding: 20px; }
+    .tip-actions { padding: 12px 20px calc(14px + env(safe-area-inset-bottom)); }
+    .tip-terms dt { width: 84px; }
 }
+@keyframes tipUp { from { translate: 0 100%; } }
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) { .tip[open] { animation-name: joinFade; } }   /* 동작 줄이기: 올라오지 않고 페이드로 */
 @media (max-width: 420px) {   
     /* 메뉴 5개(코브 몰·내 오피스)가 한 줄에 들어가게 */
     .nav { padding: 0 12px; }

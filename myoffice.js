@@ -556,6 +556,7 @@ if(navAcct) navAcct.addEventListener('click',e=>{
   showTab('account');   // 로그인 중이면 내 오피스 계정 탭으로 (이미 열려 있으면 탭만 바꿈)
   if(window.covvOpenScreen) window.covvOpenScreen('office',e.detail===0?{}:{x:e.clientX,y:e.clientY});
 });
+window.covvJoin=()=>{ if(W.signedIn()) return; if(W.member()) openLogin(); else openJoin(); };   // 상품 창 '신규 가입 혜택' 안내 창의 회원가입 단추 (checkout.js) — 위 👤와 같은 갈래
 W.on(k=>{ if(k==='profile'||k==='account'||k==='*') paintNav(); });   // 아이템을 주울 때마다 다시 그리지 않게
 paintNav();
 
