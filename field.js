@@ -31,6 +31,7 @@ if(!window.THREE){ fieldEl.classList.add('no-webgl'); window.covvField=null; ret
 const IS_TOUCH=matchMedia('(pointer: coarse)').matches;
 const MAX_DPR=IS_TOUCH?1.25:1.5;
 const FPS=IS_TOUCH?30:60;
+const IDLE_FPS=30, IDLE_MS=20000;   // 누르기 · 움직이기 · 키 입력이 20초 없으면 30fps로 (가만히 켜 둔 들판의 발열 줄이기 — 움직임은 dt 기반이라 속도 같음), 입력이 오면 바로 원래대로
 const GRASS_COUNT=IS_TOUCH?15000:36000;
 const FLOWER_COUNT=IS_TOUCH?350:800;
 const SHADOW_SIZE=IS_TOUCH?1024:2048;
@@ -1729,8 +1730,9 @@ function resize(){
   if(!resize.done){ camera.position.copy(follow).add(camOff); camLook.copy(follow).add(camLookOff); camera.lookAt(camLook); resize.done=true; }
   renderer.setSize(W,H);
 }
-// 크기가 바뀌면 캔버스가 지워지므로 바로 한 장 다시 그림 (깜빡임 방지)
-new ResizeObserver(()=>{ resize(); if(!first&&!paused) renderer.render(scene,camera); }).observe(stage);
+// 크기가 바뀌면 캔버스가 지워지므로 바로 한 장 다시 그림 (깜빡임 방지) — ResizeObserver를 모르는 옛 브라우저(iOS 13.3 이하)는 창 크기 이벤트로
+const onResize=()=>{ resize(); if(!first&&!paused) renderer.render(scene,camera); };
+if('ResizeObserver' in window) new ResizeObserver(onResize).observe(stage); else addEventListener('resize',onResize);
 resize();
 (function watchDpr(){   // 창을 해상도가 다른 모니터로 옮길 때
   const mq=matchMedia(`(resolution: ${devicePixelRatio}dppx)`);
@@ -1786,10 +1788,11 @@ function update(dt){
 }
 
 /* ── 렌더 루프 (다른 화면이 열리면 멈춤) ── */
-let rafId=null, last=0, prev=0, first=true;
+let rafId=null, last=0, prev=0, first=true, lastInput=performance.now();
+['pointerdown','pointermove','keydown','wheel','touchstart'].forEach(t=>addEventListener(t,()=>{ lastInput=performance.now(); },{passive:true}));
 function frame(now){
   rafId=requestAnimationFrame(frame);
-  const iv=1000/FPS;
+  const iv=1000/(now-lastInput>IDLE_MS?Math.min(FPS,IDLE_FPS):FPS);
   if(now-last<iv-2) return;
   last=Math.min(now,Math.max(last+iv,now-iv));   // 일정 간격 유지 → 90·120·144Hz 화면에서도 목표 프레임 근처
   const dt=Math.min((now-prev)/1000,0.05); prev=now;

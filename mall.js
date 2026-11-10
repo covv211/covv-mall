@@ -5,6 +5,7 @@
      대신 할인은 '키링 1개당 최대 100원'(금화 100개 = 쿠폰 1장) — 계산은 checkout-rules.js 한 곳에서,
      실제 결제 때는 결제 서버가 같은 파일로 직접 계산해서 이 한도를 지킴
    - 하트 = 키링 응원 선물, 별 = 다음 키링 투표, 사탕 = 코브 색 고르기
+   - 진열대 검색: 코브 몰 제목 바로 아래 큰 검색창 → 글자를 칠 때마다 맞는 카드만 남김 (이름 · 설명 · 도장 · 별명 kw · 같은 뜻 낱말, 치는 중인 글자 · 초성도)
    - '내 가방'(아이템 수·쿠폰 진행·할인 규칙·뱃지)은 코브 몰이 아니라 주문/결제 화면 맨 위(#checkoutBag)에 그림. 상품 창·장바구니·주문서는 checkout.js
    - 소개 화면의 '들판에서 줍는 아이템' 안내도 여기서 숫자·확률을 채움 (확률은 field.js의 covvField.drops())
    - 내 오피스(미니홈피)용 기록도 여기: 프로필·방문 수·다이어리·최근 소식 (myoffice.js가 화면을 그림)
@@ -31,6 +32,24 @@ const NICK_BAN=/운영자|관리자|admin|코브\s*몰|공식/i;   // 가게·�
 const PW_MIN=8, PW_MAX=64;                // 계정 비밀번호 글자 수 (짧으면 해시가 새어 나갔을 때 금방 풀림)
 const PW_ITER=600000;                     // 비밀번호 해시(PBKDF2-SHA256) 반복 횟수 — OWASP 2023 권장값, 휴대폰에서 0.5초 안팎
 const PW_EASY=new Set(['12345678','123456789','1234567890','87654321','password','password1','qwerty12','qwerty123','qwer1234','asdf1234','1q2w3e4r','1q2w3e4r5t','abcd1234','iloveyou','abc12345']);   // 누구나 먼저 넣어 보는 비밀번호
+
+const NEW_DAYS=14;                        // 진열대에 올린 날(day)부터 이만큼 'NEW' 도장 · NEW 정렬 맨 앞 (tag:'NEW'를 손으로 붙이면 한 달 지나도 신상처럼 보임)
+const SHOW_STATS=false;                   // sold·reviews가 진짜 숫자가 되면 true → '리뷰 많은'·'판매량' 정렬을 공개 화면에도 (지금은 예시 숫자라 미리보기에서만)
+const TOAST_MS=[2800,8000], TOAST_CH=90;  // 알림이 떠 있는 시간(ms) 최소 · 최대, 한 글자당 더하는 시간 — 긴 안내를 천천히 읽는 손님도 놓치지 않게
+const Q_MAX=40;                           // 진열대 검색어 최대 글자 수
+const Q_NAV=88;                           // 위 고정 메뉴가 가리는 높이(px) — style.css .screen scroll-padding-top과 같은 값
+const Q_HOLD=['찾는 키링이 있나요? 이름 · 동물 · 색으로 찾아보세요','키링 이름 · 동물 · 색'];   // 검색창 안내 글: 넓은 화면 · 휴대폰(720px 이하 — 긴 글은 잘려 보임)
+const Q_HINTS=['강아지','고양이','곰','공룡','하트','아크릴','자동차','옥'], Q_HINT_N=5;   // 검색 결과가 없을 때 '이렇게 찾아보세요' 낱말 — 지금 진열대에서 실제로 찾히는 것만 앞에서 Q_HINT_N개
+// 같은 뜻 낱말 — 상품 글에 하나가 있으면 나머지로도 찾힘 ('검정 고양이' → 검은 고양이 인형 · '곰' → 쿠마)
+// 한 글자는 뜻이 하나뿐인 것만(흰 · 곰), '그린'(그린 그림) · '은색'(검은색) 같은 건 다른 낱말 속에 끼어 엉뚱한 상품이 걸려서 뺌
+const Q_SAME=[
+  ['검정','검은','까만','블랙'],['흰','하얀','화이트'],['빨강','빨간','레드'],['분홍','핑크'],['주황','오렌지'],['노랑','노란','옐로'],
+  ['초록','녹색'],['파랑','파란','블루'],['보라','퍼플'],['금빛','금색','골드'],['은빛','실버'],
+  ['고양이','냥이'],['곰','쿠마','곰돌이'],['강아지','멍멍이','댕댕이'],['자동차','차량'],   // '블랙캣'은 넣지 않음: 고양이 묶음에 있으면 '블랙'에 키보드 키링(고양이 키캡)이 걸림
+];
+// 주인님 미리보기(내 컴퓨터 · 같은 와이파이로 연 휴대폰) — ✏️ 채울 곳 안내 · 빈 사진 자리 · 사진 없는 예시 종류는 여기서만 보이고 공개 사이트에선 숨김
+const PREVIEW=/^(localhost|127\.0\.0\.1|\[::1\])$|^(10|192\.168|172\.(1[6-9]|2\d|3[01]))\.|\.(local|localhost|test)$/.test(location.hostname);   // 사설 IP = 휴대폰으로 연 미리보기 (visitors.js도 같은 규칙 — 바꾸면 같이)
+if(PREVIEW) document.documentElement.classList.add('preview');
 
 /* ── 가방 (이 브라우저에 저장) ── */
 const DEF={coin:0,heart:0,star:0,gem:0,candy:0,color:0,rainbow:false,look:'분홍',gift:false,given:{},votes:{},
@@ -322,7 +341,7 @@ let toastT=null;
 function toast(msg){
   if(!toastEl) return;
   toastEl.textContent=msg; toastEl.classList.add('show');
-  clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),2800);
+  clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),Math.min(TOAST_MS[1],Math.max(TOAST_MS[0],String(msg).length*TOAST_CH)));
 }
 
 /* 첫 방문 선물: 게임을 안 해도 하트·별을 바로 눌러 볼 수 있게 */
@@ -475,17 +494,18 @@ function coveSVG(color,variant,opts={}){   // opts.plain: 고리·아크릴 테�
 /* ══════════ 코브 몰 화면 ══════════ */
 // 진열대: 한정판(그린 코브, 들판 무지개 코브와 이어짐)은 맨 위 카드, 나머지는 배경 지운 키링 사진(images/stall 300×300)을 종이로 오려 붙인 모양
 // (지금 사진 20장 중 비숑 아크릴(keyring-21, 2026-11-09 주인님 사진) 말고는 테스트용 남의 상품 → 공개 전 실제 상품 사진·이름으로 바꿀 것. 하트 기록은 id로 남으니 id는 상품마다 새로. 들판 가판대는 앞 5장만 field.js에 따로)
-// 진열 순서 = '추천' 정렬. sold·reviews는 '판매량'·'리뷰 많은' 정렬에만 쓰는 예시 숫자(화면엔 안 보임), day = 진열대에 올린 날('NEW' 정렬)
+// 진열 순서 = '추천' 정렬. sold·reviews는 '판매량'·'리뷰 많은' 정렬에만 쓰는 예시 숫자(화면엔 안 보임, 정렬도 SHOW_STATS 전엔 미리보기에서만), day = 진열대에 올린 날 → NEW_DAYS일 안이면 'NEW' 도장 · NEW 정렬 맨 앞(tag는 '한정' 같은 다른 도장만)
 // 상품 창 큰 사진 아래: shots:['images/…'] = 사진 몇 장(차례로), story:'…' = 상품 소개 글(\n = 문단 나눔). 없으면 빈 사진 자리 · 짧은 소개(desc)만 (✏️ 직접 넣으세요, OPTIONS 종류마다 따로 줘도 됨)
 const PRODUCTS=[
   {id:'rainbow',   name:'무지개 코브 키링',   color:'#ff9ccb', bg:'#fff4d6', variant:'rainbow', tag:'한정', limited:true, desc:'히든 물감을 먹고 무지개 코브가 된 사람만 살 수 있어요. 보석 3개를 모으면 출시 첫날 먼저 살 수 있어요.'},
-  {id:'tiger',     name:'주황 호랑이 키링',   img:'images/stall/keyring-1.webp',  paper:'#ffb98a', price:12000, sold:132, reviews:24, day:'2026-10-2', tag:'NEW', desc:'도넛 참을 단 주황 호랑이. 손을 흔들며 인사해요.'},
+  {id:'beebichon', name:'꿀벌 비숑 아크릴 키링', img:'images/stall/keyring-22.webp', paper:'#ffe27a', price:14000, sold:0,   reviews:0,  day:'2026-11-10',           desc:'줄무늬 꿀벌 옷에 더듬이 · 반짝이 날개를 단 비숑. 투명 아크릴 키링.', kw:'달리 강아지 꿀벌'},
+  {id:'tiger',     name:'주황 호랑이 키링',   img:'images/stall/keyring-1.webp',  paper:'#ffb98a', price:12000, sold:132, reviews:24, day:'2026-10-2',            desc:'도넛 참을 단 주황 호랑이. 손을 흔들며 인사해요.'},
   {id:'violet',    name:'보라 머리 소녀 키링', img:'images/stall/keyring-2.webp',  paper:'#c3a6ff', price:15000, sold:96,  reviews:41, day:'2026-10-2',            desc:'금빛 동전 참이 함께 달린 에나멜 키링.'},
   {id:'squirrel',  name:'도토리 다람쥐 키링', img:'images/stall/keyring-3.webp',  paper:'#ffe27a', price:11000, sold:58,  reviews:12, day:'2026-10-2',            desc:'도토리와 단풍잎 참을 단 금빛 다람쥐.'},
   {id:'dino',      name:'초록 공룡 키링',     img:'images/stall/keyring-4.webp',  paper:'#8fe3c4', price:9000,  sold:210, reviews:37, day:'2026-10-2',            desc:'볼이 발그레한 초록 공룡 아크릴 키링.'},
-  {id:'fox',       name:'무지개 여우 키링',   img:'images/stall/keyring-5.webp',  paper:'#8cc8ff', price:13000, sold:74,  reviews:33, day:'2026-10-2', tag:'NEW', desc:'버섯·클로버 참을 단 알록달록 펠트 여우.'},
+  {id:'fox',       name:'무지개 여우 키링',   img:'images/stall/keyring-5.webp',  paper:'#8cc8ff', price:13000, sold:74,  reviews:33, day:'2026-10-2',            desc:'버섯·클로버 참을 단 알록달록 펠트 여우.'},
   {id:'flower5',   name:'5잎 솜 키링',        img:'images/stall/keyring-6.webp',  paper:'#9fe0b0', price:12000, sold:88,  reviews:19, day:'2026-10-5',            desc:'폭신한 검정 꽃잎 다섯 장에 초록 받침을 댄 솜 키링.'},
-  {id:'bichon',    name:'흰 비숑 아크릴 키링', img:'images/stall/keyring-21.webp', paper:'#ffc08a', price:14000, sold:47,  reviews:15, day:'2026-11-9', tag:'NEW', desc:'복슬복슬 흰 비숑이 앞발을 내민 투명 아크릴 키링.'},
+  {id:'bichon',    name:'흰 비숑 아크릴 키링', img:'images/stall/keyring-21.webp', paper:'#ffc08a', price:14000, sold:47,  reviews:15, day:'2026-11-9',            desc:'복슬복슬 흰 비숑이 앞발을 내민 투명 아크릴 키링.', kw:'달리 강아지'},
   {id:'clover',    name:'네잎클로버 키링',    img:'images/stall/keyring-8.webp',  paper:'#c9e89a', price:9000,  sold:163, reviews:28, day:'2026-10-5',            desc:'매트한 검정 네잎클로버에 주황 가죽 태그를 달았어요.'},
   {id:'metalkuma', name:'메탈 쿠마 키링',     img:'images/stall/keyring-9.webp',  paper:'#c9c6cf', price:15000, sold:69,  reviews:22, day:'2026-10-5',            desc:'은빛 메탈 곰과 검정 땋은 끈 고리.'},
   {id:'blackcat',  name:'블랙캣 키링',        img:'images/stall/keyring-10.webp', paper:'#ffd9a8', price:16000, sold:121, reviews:52, day:'2026-10-5',            desc:'빨간 줄무늬 목도리를 두른 털복숭이 검은 고양이 인형.'},
@@ -500,6 +520,7 @@ const PRODUCTS=[
   {id:'keycap',    name:'키보드 키링',        img:'images/stall/keyring-19.webp', paper:'#ffd1b3', price:14000, sold:91,  reviews:38, day:'2026-10-5',            desc:'고양이 키캡 다섯 개를 눌러 볼 수 있는 미니 키보드.'},
   {id:'pinkjade',  name:'핑크 옥 키링',       img:'images/stall/keyring-20.webp', paper:'#ffc4d6', price:12000, sold:44,  reviews:11, day:'2026-10-5',            desc:'분홍 옥 고리와 흰 옥 꽃을 매듭으로 엮었어요.'},
 ];   // price·sold·reviews는 예시 (✏️ 주인님이 정하면 직접 수정) — 화면 표시·정렬용, 실제 결제 금액은 결제 서버의 가격표로 다시 계산. 가게가 열리면 sold·reviews는 서버의 실제 숫자로
+// kw: 검색에만 쓰는 별명 (화면엔 안 보임, 띄어쓰기로 나눔) — 이름 · 설명에 없는 말로도 찾히게 ('달리' → 비숑 · ✏️ 상품을 바꾸면 직접 수정하세요)
 // 상품 창 '색상 · 캐릭터 선택' 칸: 상품 id → 그 키링의 종류. 첫 줄 = 진열대에 붙은 그 상품(id 같음, 이름·색은 PRODUCTS 그대로)
 // 장바구니·주문서·가격표는 종류 id로 셈 (가격은 price를 따로 안 적으면 기본 상품과 같음) → 결제 서버 가격표에도 같은 id로 넣을 것
 // (✏️ 지금 종류 이름·색은 예시: 종류별 사진이 생기면 img:'images/…'를 넣고 이름·색도 직접 수정하세요. img가 없으면 기본 사진 + paper 색 칸)
@@ -542,6 +563,10 @@ const OPTIONS={
 };
 // 진열대 정렬 탭 [키, 이름] — '추천' = PRODUCTS 순서 그대로, 같은 값끼리도 추천 순서를 지킴
 const SORTS=[['pick','추천'],['low','낮은가격'],['high','높은가격'],['review','리뷰 많은'],['sold','판매량'],['new','NEW']];
+const STAT_SORTS=['review','sold'];   // 예시 숫자(sold·reviews)로 줄 세우는 정렬 — SHOW_STATS 전엔 미리보기에서만 (아직 안 팔렸는데 판매 순위처럼 보이지 않게)
+const dayDate=s=>{ const [y,m,d]=String(s||'').split('-').map(Number); return y?new Date(y,(m||1)-1,d||1):null; };   // 'YYYY-M-D' → 그날 0시
+const isNew=p=>{ const d=dayDate(p.day); return !!d&&(Date.now()-d)/864e5<NEW_DAYS; };
+const stampOf=p=>p.tag&&p.tag!=='NEW'?p.tag:isNew(p)?'NEW':'';   // 진열대 도장: '한정' 같은 tag 먼저, 아니면 올린 지 NEW_DAYS일 안이면 NEW
 const RETIRED={pink:'분홍 코브 키링',sky:'하늘 코브 키링',mint:'민트 코브 키링',lav:'라벤더 코브 키링',para:'낙하산 코브 키링',bubble:'거품 속 코브 키링',leatherdog:'가죽 강아지 키링'};   // 진열대에서 내려간 상품 이름 (하트 기록이 남아 있어 내 오피스 '응원한 키링' 목록에 씀)
 const VOTES=[
   {id:'sleepy', name:'잠꾸러기 코브', color:'#c3a6ff', variant:'sleepy', desc:'눈 감고 쿨쿨'},
@@ -557,7 +582,7 @@ const BAG=[
 ];
 
 // 내 오피스(myoffice.js)에서도 같은 그림·상품 목록을 씀
-window.covvArt={coveSVG,PRODUCTS,OPTIONS,RETIRED,VOTES,BAG,GEM_EARLY,DAY_HEART,DAY_STAR,DECO_CANDY,tornClip};   // tornClip: 상품 창·주문서 썸네일의 찢은 색종이도 같은 모양 (checkout.js)
+window.covvArt={coveSVG,PRODUCTS,OPTIONS,RETIRED,VOTES,BAG,GEM_EARLY,DAY_HEART,DAY_STAR,DECO_CANDY,tornClip,PREVIEW};   // tornClip: 상품 창·주문서 썸네일의 찢은 색종이도 같은 모양, PREVIEW: 사진 없는 예시 종류 · 빈 사진 자리는 미리보기에서만 (checkout.js)
 
 const root=document.getElementById('mallRoot');
 if(!root) return;
@@ -590,32 +615,62 @@ bagRoot.innerHTML=`
     <ul class="badges" id="badges"></ul>
   </section>`;
 
+// 자주 묻는 질문 (코브 몰 맨 아래) [질문, 답, 표시] — 표시 'get' = 위 줄 '🎒 하트 · 별 · 금화'를 누르면 열리는 질문 · 숫자는 규칙 상수에서 (따로 적으면 규칙을 바꿀 때 어긋남)
+// ✏️ 배송 · 교환 · 반품 답은 문을 열 때 실제 정책(출고 기간 · 택배사 · 반품 배송비)으로 직접 수정하세요
+const won=n=>n.toLocaleString('ko-KR')+'원';
+const FAQ=[
+  ['지금 키링을 살 수 있어요?', `<p>아직 문을 열기 전이에요. 구경 · 장바구니 · 하트 · 투표는 지금도 되고, 결제는 코브 몰이 문을 열면 시작해요. 지금 보이는 가격 · 리뷰는 예시예요.</p>`],
+  ['금화 · 하트 · 별 · 사탕은 어디서 얻어요?', `<p>들판 땅에서 올라오는 빈 거품을 터트리면 아이템이 떨어지고, 코브가 닿으면 주워요. 거품을 직접 눌러서 터트려도 돼요. 가끔 금화 주머니 · 보석 · 무지개 물감도 나와요.</p>`, 'get'],
+  ['금화로 얼마나 할인받아요?', `<p>금화 ${COUPON_COINS}개 = 쿠폰 1장 = 키링 1개 ${COUPON_WON}원 할인이에요. 자세한 규칙은 아래를 펼쳐 보세요.</p>${rulesHTML()}`],
+  ['하트 선물은 뭐예요?', `<p>마음에 드는 키링을 응원하는 표시예요. 한 키링에 하루 ${DAY_HEART}개까지 줄 수 있고, 응원한 키링은 내 오피스에 모여요. 하트가 떨어지면 들판에서 더 주워 오면 돼요.</p>`],
+  ['별 · 사탕은 어디에 써요?', `<p>별은 '다음 키링 투표'에서 만들었으면 하는 후보에 걸어요(한 후보에 하루 ${DAY_STAR}개). 사탕 ${DECO_CANDY}개로는 들판을 걷는 내 코브의 색을 바꿀 수 있어요.</p>`],
+  ['금화가 사라졌어요 · 다른 기기에서 안 보여요', `<p>가방은 이 브라우저에만 저장돼요. 인터넷 사용 기록을 지우거나 사생활 보호(시크릿) 창을 쓰면 사라지고, 다른 기기 · 브라우저에서는 보이지 않아요. 사파리는 7일 넘게 들르지 않으면 지워질 수도 있어요. 사라진 금화는 복구해 드릴 수 없어요.</p>`],
+  ['배송 · 교환 · 반품은요?', `<p>판매를 시작할 때 배송 기간 · 택배사 · 교환 · 반품 방법을 여기와 상품 창에 적어 둘게요. 지금 보이는 배송비(${won(R.SHIP_FEE)}, ${won(R.SHIP_FREE)} 이상 무료)는 예시예요.</p>`],
+  ['회원가입하면 뭐가 달라요?', `<p>지금 계정은 이 브라우저에만 만들어져요. 로그아웃하면 이 브라우저에서 내 오피스(미니홈피)를 가려 둘 수 있고, 로그인 중엔 들판의 내 코브 이름표에 닉네임이 보여요. 이름 · 연락처 같은 개인정보는 받지 않아요.</p>`],
+];
+
 root.innerHTML=`
+  <form class="mall-search" role="search" aria-label="키링 검색" data-search>
+    <svg class="mall-search-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4 20.5 20.5"/></svg>
+    <input type="search" id="mallQ" name="q" maxlength="${Q_MAX}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="키링 검색 · 이름, 동물, 색으로" aria-describedby="mallQMsg">
+    <button type="button" class="mall-search-x" data-search-clear aria-label="검색어 지우기" hidden>✕</button>
+    <button type="submit" class="mall-search-go">검색</button>
+  </form>
+  <p class="mall-search-msg" id="mallQMsg" aria-live="polite"></p>
   <div class="mall-top">
     <div class="mall-sort" role="group" aria-label="키링 정렬">
-      ${SORTS.map(([k,t])=>`<button type="button" data-sort="${k}" aria-pressed="${k==='pick'}">${t}</button>`).join('')}
+      ${SORTS.filter(([k])=>SHOW_STATS||PREVIEW||!STAT_SORTS.includes(k)).map(([k,t])=>`<button type="button" data-sort="${k}" aria-pressed="${k==='pick'}">${t}</button>`).join('')}
     </div>
+    <button type="button" class="mall-have" data-faq aria-describedby="faqTitle">🎒 하트 <b data-have="heart">0</b> · 별 <b data-have="star">0</b> · 금화 <b data-have="coin">0</b></button>
     <button type="button" class="mall-cart" data-cart>🛒 장바구니 <b data-cart-n>0</b></button>
   </div>
+  <p class="mall-soon">🚧 오픈 준비 중이에요 · 가격과 리뷰는 예시이고, 지금은 구경 · 장바구니 · 하트 · 투표만 돼요</p>
 
   <section class="mall-block" aria-label="키링 진열대">
     <div class="kr-board">
+      <div class="kr-none" data-search-none hidden>
+        <p class="kr-none-title">🔍 <span data-search-q></span> 키링은 아직 없어요</p>
+        <p class="kr-none-tip">이름 · 동물 · 색으로 찾아보거나, 아래 '다음 키링 투표'에서 만들었으면 하는 키링에 별을 걸어 주세요.</p>
+        <div class="kr-none-hints" data-search-hints></div>
+        <button type="button" class="kr-none-all" data-search-clear>전체 키링 보기</button>
+      </div>
       ${PRODUCTS.filter(p=>p.img).map(p=>`
-      <article class="kr cut" data-p="${p.id}">
+      <article class="kr cut" data-p="${p.id}" aria-labelledby="krName_${p.id}">
         <div class="kr-card">
-          <button type="button" class="kr-pic" data-open aria-label="${p.name} 자세히 보기 · 구매">
+          <button type="button" class="kr-pic" data-open tabindex="-1" aria-label="${p.name}${stampOf(p)?' · '+stampOf(p):''} 자세히 보기 · 구매">
             <span class="kr-paper" aria-hidden="true"></span>
             <img src="${p.img}" alt="${p.name} 사진" width="300" height="300" loading="lazy" decoding="async">
             <span class="kr-tape" aria-hidden="true"></span>
-            ${p.tag?`<span class="kr-stamp">${p.tag}</span>`:''}
+            ${stampOf(p)?`<span class="kr-stamp">${stampOf(p)}</span>`:''}
           </button>
           <div class="kr-slip"><div class="kr-label">
-            <h4>${p.name}</h4>
+            <h4 id="krName_${p.id}">${p.name}</h4>
+            ${p.price?`<p class="kr-price"><b>${p.price.toLocaleString('ko-KR')}</b>원</p>`:''}
             <div class="kr-row">
               <span class="kr-count" title="내가 준 하트">♥ <b data-given>0</b></span>
-              <button type="button" class="kr-btn" data-heart>하트 선물</button>
+              <button type="button" class="kr-btn" data-heart aria-describedby="krName_${p.id}">하트 선물</button>
             </div>
-            <button type="button" class="kr-buy go" data-open>자세히 · 구매</button>
+            <button type="button" class="kr-buy go" data-open aria-describedby="krName_${p.id}">자세히 · 구매</button>
           </div></div>
         </div>
       </article>`).join('')}
@@ -642,6 +697,13 @@ root.innerHTML=`
     <p class="fine">사탕 ${DECO_CANDY}개로 들판의 내 코브 색을 바꿀 수 있어요. 무지개는 무지개 코브가 된 적이 있어야 열려요.</p>
     <div class="swatches" id="swatches"></div>
   </section>
+
+  <section class="mall-block mall-faq" id="mallFaq" aria-labelledby="faqTitle">
+    <h3 id="faqTitle">❓ 자주 묻는 질문</h3>
+    <div class="faq">
+      ${FAQ.map(([q,a,k])=>`<details${k?` data-faq-${k}`:''}><summary>${q}</summary><div class="faq-a">${a}</div></details>`).join('')}
+    </div>
+  </section>
 `;
 
 // 색은 HTML의 style="" 대신 여기서 칠함 (CSP가 style 속성을 막음 — el.style로 넣는 건 괜찮음)
@@ -655,15 +717,18 @@ function tornClip(seed,top,sides){
   for(let y=94;y>0;y-=6) pts.push(`${j(sides)}% ${y}%`);
   return `polygon(${pts.join(',')})`;
 }
-// 진열대 콜라주: 상품마다 크기(3배 · 1.5배 · 0.5배 · 그대로)와 기울기(반은 0~20도, 반은 0~-20도)를 섞어 정함
+// 진열대 콜라주: 상품마다 크기(2배 · 1.5배 · 0.5배 · 그대로)와 기울기(반은 0~20도, 반은 0~-20도)를 섞어 정함
 // 씨앗 고정 → 새로고침해도 같은 배치, 정렬을 바꿔도 카드를 따라감
 const KR_SIZE=[['big',2],['mid',4],['mini',4]];   // [크기, 장수] — 나머지는 지금 크기
+const KR_PIN={bichon:'big',beebichon:'big'};      // 상품 id → 크기 고정 (주인님 자체 상품 '달리' 비숑 · 꿀벌 비숑은 크게 — 섞은 순서로는 0.5배가 됐음), 장수는 위 KR_SIZE 안에서
 const KR_TURN=20;                                  // 기울기 최대(도) — 카드마다 0~20 사이, 반은 반대쪽(0~-20)
 function shuffled(n,seed){ let s=seed; const r=()=>(s=(s*9301+49297)%233280)/233280, a=[...Array(n).keys()]; for(let i=n-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 (()=>{
   const ks=[...root.querySelectorAll('.kr.cut')], look=ks.map(()=>({size:'',turn:0}));
-  let at=0; const bySize=shuffled(ks.length,23);
-  for(const [cls,n] of KR_SIZE) for(let j=0;j<n&&at<bySize.length;j++) look[bySize[at++]].size=cls;
+  const left={}; KR_SIZE.forEach(([cls,n])=>{ left[cls]=n; });
+  ks.forEach((k,i)=>{ const cls=KR_PIN[k.dataset.p]; if(cls&&left[cls]>0){ look[i].size=cls; left[cls]--; } });   // 고정한 상품 먼저
+  const bySize=shuffled(ks.length,23).filter(i=>!look[i].size); let at=0;
+  for(const [cls] of KR_SIZE) for(let j=0;j<left[cls]&&at<bySize.length;j++) look[bySize[at++]].size=cls;
   let s=97; const r=()=>(s=(s*9301+49297)%233280)/233280;
   shuffled(ks.length,41).forEach((i,j)=>{ look[i].turn=Math.round(r()*KR_TURN)*(j%2?-1:1); });   // 섞은 순서로 번갈아 + · - → 양쪽이 반씩
   ks.forEach((k,i)=>{
@@ -704,17 +769,21 @@ function paintMall(){
     const id=el.dataset.p, r=rec('given',id), p=PRODUCTS.find(x=>x.id===id);
     el.querySelector('[data-given]').textContent=r.total;
     const btn=el.querySelector('[data-heart]');
-    const locked=p.limited&&!state.rainbow;
-    btn.disabled=locked||r.today>=DAY_HEART||wallet.get('heart')<1;
-    btn.textContent=r.today>=DAY_HEART?'오늘은 여기까지!':wallet.get('heart')<1?'하트가 없어요':'하트 선물';
+    const locked=p.limited&&!state.rainbow, done=r.today>=DAY_HEART, none=wallet.get('heart')<1, pick=none&&!!window.covvField;
+    btn.disabled=locked||done||(none&&!pick);
+    btn.dataset.need=!locked&&!done&&pick?'heart':'';   // 하트가 없으면 끄지 않고 '하트 줍기' → 들판으로 (회색 단추 20개만 남으면 어디서 얻는지 모름) · 들판이 없는 기기(WebGL X)는 예전처럼 꺼 둠
+    btn.textContent=done?'오늘은 여기까지!':pick?'하트 줍기':none?'하트가 없어요':'하트 선물';
   });
   root.querySelectorAll('.vt').forEach(el=>{
     const r=rec('votes',el.dataset.v);
     el.querySelector('[data-voted]').textContent=r.total;
     const btn=el.querySelector('[data-star]');
-    btn.disabled=r.today>=DAY_STAR||wallet.get('star')<1;
-    btn.textContent=r.today>=DAY_STAR?'오늘은 여기까지!':wallet.get('star')<1?'별이 없어요':'별 걸기';
+    const done=r.today>=DAY_STAR, none=wallet.get('star')<1, pick=none&&!!window.covvField;
+    btn.disabled=done||(none&&!pick);
+    btn.dataset.need=!done&&pick?'star':'';
+    btn.textContent=done?'오늘은 여기까지!':pick?'별 줍기':none?'별이 없어요':'별 걸기';
   });
+  root.querySelectorAll('[data-have]').forEach(b=>{ b.textContent=short(wallet.get(b.dataset.have)); });
   paintSwatches();
 }
 
@@ -744,8 +813,24 @@ function floatUp(btn,text){
   btn.parentElement.appendChild(s); s.addEventListener('animationend',()=>s.remove());
 }
 root.addEventListener('click',e=>{
+  const qc=e.target.closest('[data-search-clear]');
+  if(qc){ qIn.value=''; searchBoard(''); if(qc===qX) qIn.focus(); else qFocus(); return; }   // ✕ = 다시 쓰기, '전체 키링 보기' = 누른 단추가 사라지니 검색창 쪽으로 포커스
+  const qh=e.target.closest('[data-search-hint]');
+  if(qh){ qIn.value=qh.dataset.searchHint; searchBoard(qIn.value); qFocus(); return; }   // 결과가 없을 때 '이렇게 찾아보세요' 낱말
   const so=e.target.closest('[data-sort]');
   if(so){ if(so.dataset.sort!==sortKey) sortBoard(so.dataset.sort); return; }
+  const need=e.target.closest('[data-need]:not([data-need=""])');
+  if(need){   // 하트 · 별이 없으면 들판으로 — 빈 거품을 터트리면 나옴
+    toast(need.dataset.need==='heart'?'🎈 들판의 빈 거품을 터트리면 하트가 나와요':'🎈 들판의 빈 거품을 터트리면 별이 나와요');
+    if(window.covvCloseScreen) window.covvCloseScreen();
+    return;
+  }
+  if(e.target.closest('[data-faq]')){   // 위 줄 '🎒 하트 · 별 · 금화' → 자주 묻는 질문 '어디서 얻어요?'를 열고 그 자리로
+    const d=root.querySelector('[data-faq-get]'); if(!d) return;
+    d.open=true; d.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+    d.querySelector('summary').focus({preventScroll:true});
+    return;
+  }
   const h=e.target.closest('[data-heart]');
   if(h){
     const id=h.closest('.kr').dataset.p, p=PRODUCTS.find(x=>x.id===id), r=rec('given',id);
@@ -777,9 +862,16 @@ root.addEventListener('click',e=>{
 });
 
 // 가게 화면이 열려 있을 때만 다시 그림 (들판에서 아이템을 주울 때마다 다시 그릴 필요 없음)
-let mallOpen=false, bagOpen=false;
+let mallOpen=false, bagOpen=false, lastScreen=null;
 wallet.on(()=>{ if(mallOpen) paintMall(); if(bagOpen) paintBag(); });
-addEventListener('covv-screen',e=>{ mallOpen=e.detail==='mall'; bagOpen=e.detail==='checkout'; if(mallOpen) paintMall(); if(bagOpen) paintBag(); resetBoard(); });
+addEventListener('covv-screen',e=>{
+  const back=e.detail==='mall'&&lastScreen==='checkout'; lastScreen=e.detail;   // 주문서에서 '← 코브 몰로' 돌아오면 보던 자리 그대로 (screens.js가 스크롤도 되돌림) — 카드를 다시 숨겼다 붙이지 않음
+  mallOpen=e.detail==='mall'; bagOpen=e.detail==='checkout';
+  if(mallOpen) paintMall(); if(bagOpen) paintBag();
+  if(!mallOpen) cards().forEach(k=>k.classList.remove('in'));   // 붙는 중에 떠나면 animationend가 안 와서 'in'이 남음 → 돌아올 때 연출이 되풀이되지 않게
+  if(mallOpen&&!back) resetBoard();
+  else if(mallOpen&&boardIO) cards().forEach(k=>{ if(k.classList.contains('wait')) boardIO.observe(k); });   // 주문서 주소로 바로 들어왔다가 돌아온 경우: 한 번도 관찰을 안 한 카드가 숨은 채 남지 않게 (이미 관찰 중이면 아무 일 없음)
+});
 // 종이 진열대는 카드가 화면에 들어올 때 한 장씩 붙음 — 20장(4줄)이라 보드 전체를 한 번에 틀면 아래 줄은 스크롤하기 전에 끝나 버림.
 // 같이 들어온 카드끼리 앞에서부터 차례로, 가게를 다시 열거나 정렬을 바꾸면 처음부터
 const board=$('.kr-board');
@@ -788,10 +880,11 @@ const boardIO=board&&'IntersectionObserver' in window?new IntersectionObserver(e
   const now=es.filter(x=>x.isIntersecting&&x.target.classList.contains('wait')).map(x=>x.target).sort((a,b)=>a.compareDocumentPosition(b)&4?-1:1);   // 진열 순서대로 (4 = b가 a 뒤)
   now.forEach((k,i)=>{ boardIO.unobserve(k); k.style.setProperty('--i',i); k.classList.remove('wait'); k.classList.add('in'); });
 },{rootMargin:'0px 0px -12% 0px'}):null;
-// 카드마다 제 높이 + 위아래 간격(--gap-y)만큼 줄(8px)을 차지하게 → 3배 · 1.5배 · 0.5배 카드가 섞여도 간격이 고르게 쌓임 (글꼴이 오거나 폭 · 단추 글자가 바뀌어 높이가 변하면 다시)
+if(board) board.addEventListener('animationend',e=>{ if(e.target.matches('.kr.cut.in')) e.target.classList.remove('in'); });   // 다 붙은 카드는 연출 클래스를 뗌 → 주문서에 갔다 돌아와 화면이 다시 보여도 툭툭 붙는 연출이 되풀이되지 않음
+// 카드마다 제 높이 + 위아래 간격(--gap-y)만큼 줄(8px)을 차지하게 → 2배 · 1.5배 · 0.5배 카드가 섞여도 간격이 고르게 쌓임 (글꼴이 오거나 폭 · 단추 글자가 바뀌어 높이가 변하면 다시)
 const ROW=8, EDGE=6;   // grid-auto-rows와 같은 값 · 보드 끝에서 띄울 거리(px)
 function packBoard(){
-  const ks=cards(); if(!ks.length||!board.clientWidth) return;   // 화면이 닫혀 있으면(폭 0) 건너뜀
+  const ks=cards().filter(k=>!k.hidden); if(!ks.length||!board.clientWidth) return;   // 화면이 닫혀 있으면(폭 0) 건너뜀 · 검색으로 숨긴 카드는 빼고 (자리 0이라 남의 단추를 덮었다고 잘못 셈)
   const hs=ks.map(k=>k.offsetHeight);   // 읽기를 먼저 몰아서 → 줄 수를 쓸 때마다 레이아웃을 다시 재지 않게 (줄 수가 바뀌어도 카드 높이는 그대로: align-items: start)
   const g=parseFloat(getComputedStyle(board).getPropertyValue('--gap-y')), gy=isNaN(g)?84:g;   // 카드 사이 위아래 간격 (style.css --gap-y, 화면 폭마다 다름)
   ks.forEach((k,i)=>{ const n='span '+Math.ceil((hs[i]+gy)/ROW); if(k.style.gridRowEnd!==n) k.style.gridRowEnd=n; });
@@ -799,7 +892,7 @@ function packBoard(){
   // 꺾인 폭이 보드보다 넓으면 가운데로 (한쪽 끝만 맞추면 반대쪽이 화면 밖에서 잘림)
   const cw=board.clientWidth;
   const geo=ks.map(k=>{
-    const tk=parseFloat(getComputedStyle(k).getPropertyValue('--tk'))||1;   // 기울기 배율 — 휴대폰 절반, 한 줄 가득 찬 3배 카드는 더 작게 (style.css --tk)
+    const tk=parseFloat(getComputedStyle(k).getPropertyValue('--tk'))||1;   // 기울기 배율 — 휴대폰 절반, 넓은 2배 카드는 덜 꺾음 (style.css --tk)
     const c=k.firstElementChild, a=parseFloat(k.style.getPropertyValue('--tilt'))*tk*Math.PI/180||0, w=c.offsetWidth, h=c.offsetHeight;
     const hw=(w*Math.abs(Math.cos(a))+h*Math.abs(Math.sin(a)))/2, cx=k.offsetLeft+k.offsetWidth/2;
     const nx=hw*2>cw-EDGE*2?cw/2-cx:cx-hw<EDGE?EDGE-(cx-hw):cx+hw>cw-EDGE?cw-EDGE-(cx+hw):0;
@@ -833,7 +926,7 @@ const ORDER={
   high:  (a,b)=>b.price-a.price,
   review:(a,b)=>num(b.reviews)-num(a.reviews),
   sold:  (a,b)=>num(b.sold)-num(a.sold),
-  new:   (a,b)=>(b.tag==='NEW')-(a.tag==='NEW')||dayN(b.day)-dayN(a.day),   // NEW 도장 먼저, 다음은 최근에 올린 것
+  new:   (a,b)=>isNew(b)-isNew(a)||dayN(b.day)-dayN(a.day),   // NEW 도장(올린 지 NEW_DAYS일 안) 먼저, 다음은 최근에 올린 것
 };
 function sortBoard(key){
   if(!ORDER[key]||!board) return;
@@ -843,6 +936,66 @@ function sortBoard(key){
   board.classList.toggle('sorted',key!=='pick');   // 정렬 중엔 빈 곳을 뒤 카드로 메우지 않음 → 보이는 순서 = 정렬 순서 (style.css)
   packBoard(); resetBoard();   // 자리가 바뀌면 보드 끝에 걸리는 카드도 바뀜
 }
+/* ── 진열대 검색 (코브 몰 제목 바로 아래 큰 검색창) ──
+   상품마다 이름 · 설명 · 별명(kw) · 도장(NEW · 한정) · 손님에게 보이는 종류 이름 + 같은 뜻 낱말(Q_SAME)을 모아 두고, 글자를 칠 때마다 맞는 카드만 남김 (정렬 · 크기 · 기울기는 그대로)
+   글자가 딱 맞는 상품이 없으면 한글을 자모로 풀어 다시 → 치는 중인 글자도 찾힘('빗' → 비숑, '고야' → 고양이), 자음만 치면 초성('ㅎㄹㅇ' → 호랑이) · 띄어 쓴 낱말은 모두 들어 있어야 함
+   숨긴 카드는 hidden → 이미 붙은 카드는 다시 나와도 툭툭 연출을 되풀이하지 않고, 아직 안 붙은 카드만 화면에 들어올 때 붙음 (글자마다 20장이 다시 붙으면 정신없고 발열) */
+const Q_CHO='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+const Q_JUNG=['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅗㅏ','ㅗㅐ','ㅗㅣ','ㅛ','ㅜ','ㅜㅓ','ㅜㅔ','ㅜㅣ','ㅠ','ㅡ','ㅡㅣ','ㅣ'];
+const Q_JONG=['','ㄱ','ㄲ','ㄱㅅ','ㄴ','ㄴㅈ','ㄴㅎ','ㄷ','ㄹ','ㄹㄱ','ㄹㅁ','ㄹㅂ','ㄹㅅ','ㄹㅌ','ㄹㅍ','ㄹㅎ','ㅁ','ㅂ','ㅂㅅ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const Q_PAIR={'ㄳ':'ㄱㅅ','ㄵ':'ㄴㅈ','ㄶ':'ㄴㅎ','ㄺ':'ㄹㄱ','ㄻ':'ㄹㅁ','ㄼ':'ㄹㅂ','ㄽ':'ㄹㅅ','ㄾ':'ㄹㅌ','ㄿ':'ㄹㅍ','ㅀ':'ㄹㅎ','ㅄ':'ㅂㅅ','ㅘ':'ㅗㅏ','ㅙ':'ㅗㅐ','ㅚ':'ㅗㅣ','ㅝ':'ㅜㅓ','ㅞ':'ㅜㅔ','ㅟ':'ㅜㅣ','ㅢ':'ㅡㅣ'};   // 겹자모도 풀어 둠 → 치는 중인 '고'가 '과'(ㄱㅗㅏ)로 이어짐
+const qNorm=s=>{ let t=String(s||''); try{ t=t.normalize('NFC'); }catch(e){} return t.toLowerCase().replace(/[^0-9a-zᄀ-ᇿㄱ-ㆎ가-힣]+/g,''); };   // 한글 · 영문 · 숫자만, 띄어쓰기 · 기호 · 이모지는 뺌 → '흰비숑' = '흰 비숑'
+const qJamo=s=>[...s].map(ch=>{ const c=ch.charCodeAt(0)-0xac00; return c<0||c>11171?Q_PAIR[ch]||ch:Q_CHO[Math.floor(c/588)]+Q_JUNG[Math.floor(c/28)%21]+Q_JONG[c%28]; }).join('');   // '곰' → 'ㄱㅗㅁ'
+const qCho=s=>[...s].map(ch=>{ const c=ch.charCodeAt(0)-0xac00; return c<0||c>11171?ch:Q_CHO[Math.floor(c/588)]; }).join('');   // '호랑이' → 'ㅎㄹㅇ'
+// t = qNorm을 거친 낱말 하나 · 자음만이면 초성(이름 · 별명 · 종류 이름에서만 — 설명까지 보면 'ㅂㅅ'에 버섯 · 복슬복슬이 다 걸림)
+// fuzzy: 자모로 비교해 치는 중인 글자까지 → 딱 맞는 상품이 하나도 없을 때만 씀 (처음부터 넓게 찾으면 '달리'에 '달린 에나멜 키링'이 걸림)
+// 자음 하나는 치는 중인 글자의 첫소리 → 어디에 있든 맞음 (거의 거르지 않음: '검정 ㄱ'은 다음 글자가 붙기 전까지 '검정' 결과 그대로, 설명에만 있는 낱말도 '결과 없음'이 번쩍이지 않게)
+const qHit=(x,t,fuzzy)=>/^[ㄱ-ㅎ]+$/.test(t)?(t.length===1?x.jm.includes(t):x.ch.includes(t)):fuzzy?x.jm.includes(qJamo(t)):x.tx.includes(t);
+const qIdx=cards().map(k=>{
+  const p=PRODUCTS.find(x=>x.id===k.dataset.p)||{}, opts=(OPTIONS[p.id]||[]).filter(o=>o.name&&(o.img||PREVIEW)).map(o=>o.name);   // 종류 이름은 사진이 있어 손님에게 보이는 것만 (없는 종류로 찾히면 열어 봐도 안 보임) · 미리보기는 다
+  const parts=[p.name,p.desc,p.kw,stampOf(p),isNew(p)?'신상':'',...opts].filter(Boolean).map(qNorm);
+  const all=[...parts,...Q_SAME.filter(g=>g.some(w=>parts.some(t=>t.includes(w)))).flat()].join('|');   // 칸마다 '|'로 나눔 → 이름 끝과 설명 앞이 붙어 엉뚱하게 맞지 않게 (검색어엔 '|'가 없음)
+  return {k,tx:all,jm:qJamo(all),ch:qCho([p.name,p.kw,...opts].filter(Boolean).map(qNorm).join('|'))};
+});
+const qForm=$('[data-search]'), qIn=$('#mallQ'), qMsg=$('#mallQMsg'), qX=$('.mall-search-x'), qNone=$('[data-search-none]');
+function searchBoard(v){   // → 맞는 카드 수
+  const shown=String(v||'').trim().slice(0,Q_MAX), toks=shown.split(/\s+/).map(qNorm).filter(Boolean);
+  let hits=qIdx.filter(x=>toks.every(t=>qHit(x,t,false))), moved=false;
+  if(!hits.length) hits=qIdx.filter(x=>toks.every(t=>qHit(x,t,true)));   // 딱 맞는 게 없으면 치는 중인 글자로 ('빗' → 비숑, '고야' → 고양이)
+  const on=new Set(hits), n=hits.length;
+  qIdx.forEach(x=>{ const ok=on.has(x); if(x.k.hidden===ok){ x.k.hidden=!ok; if(!ok) x.k.classList.remove('in'); moved=true; } });   // 붙는 중에 숨기면 animationend가 안 와서 'in'이 남음 → 다시 보일 때 툭툭 연출이 되풀이되지 않게
+  const none=!!toks.length&&!n;
+  board.classList.toggle('none',none); qNone.hidden=!none;
+  if(none) qNone.querySelector('[data-search-q]').textContent=`‘${shown}’`;
+  qMsg.textContent=!toks.length?'':n?`‘${shown}’ 검색 결과 ${n}개`:`‘${shown}’ 검색 결과가 없어요`;
+  qX.hidden=!qIn.value;
+  if(moved) packBoard();   // 카드가 빠진 자리를 메움 (보이는 카드끼리 겹침 · 보드 끝 밀어 넣기를 다시)
+  return n;
+}
+// 누른 단추(힌트 · '전체 키링 보기')가 숨겨지면 포커스가 body로 빠짐 → 검색창 쪽으로 (휴대폰은 키보드가 튀어 오르지 않게 '검색' 단추로)
+// 검색창이 위 고정 메뉴 밑 · 화면 밖이면 보이는 곳까지 스크롤 (.screen의 scroll-padding-top이 메뉴 높이만큼 띄움)
+const qFocus=()=>{ const r=qForm.getBoundingClientRect(); (matchMedia('(pointer: fine)').matches?qIn:qForm.querySelector('.mall-search-go')).focus({preventScroll:r.top>=Q_NAV&&r.bottom<=innerHeight}); };
+(()=>{
+  const hs=Q_HINTS.filter(w=>qIdx.some(x=>qHit(x,qNorm(w),false))).slice(0,Q_HINT_N), box=qNone.querySelector('[data-search-hints]');
+  box.innerHTML=hs.map(w=>`<button type="button" class="kr-none-hint" data-search-hint="${w}">${w}</button>`).join('');   // 코드 상수 낱말만
+  box.hidden=!hs.length;
+  const narrow=matchMedia('(max-width: 720px)'), hold=()=>{ qIn.placeholder=Q_HOLD[narrow.matches?1:0]; };
+  hold(); if(narrow.addEventListener) narrow.addEventListener('change',hold);
+})();
+qIn.addEventListener('input',()=>searchBoard(qIn.value));
+qIn.addEventListener('keydown',e=>{   // Esc: 글자가 있으면 지움, 비어 있으면 검색창에서 나옴 (한 번 더 누르면 screens.js가 들판으로)
+  if(e.key!=='Escape'||e.isComposing) return;
+  e.preventDefault();
+  if(qIn.value){ qIn.value=''; searchBoard(''); } else qIn.blur();
+});
+qForm.addEventListener('submit',e=>{   // 엔터 · '검색' 단추 · 휴대폰 키보드의 '검색'
+  e.preventDefault();
+  searchBoard(qIn.value); if(!qIn.value.trim()) return;
+  if(matchMedia('(pointer: coarse)').matches) qIn.blur();   // 휴대폰은 키보드를 닫아 결과가 보이게 (마우스 · 키보드는 이어서 고쳐 쓰게 그대로)
+  const t=qForm.getBoundingClientRect().top;
+  if(t<0||t>innerHeight*.4) qForm.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});   // 검색창이 화면 아래쪽에 있으면 위로 → 바로 밑의 결과가 보임
+});
+searchBoard(qIn.value);   // 뒤로 가기로 돌아와 브라우저가 글자를 되살린 경우
 resetBoard();
 paintBag();
 paintMall();

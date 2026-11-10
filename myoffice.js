@@ -2,7 +2,7 @@
    내 오피스 — 나만의 미니홈피 (방문자 각자의 방 + 계정 정보)
    - 왼쪽 프로필: 내 코브 그림 · 닉네임 · 한 줄 소개 · 오늘의 기분 · 처음 온 날 · 함께한 날
    - 오른쪽 탭(싸이월드 미니홈피처럼): 홈(미니룸 3D + 내 계정 요약 + 최근 소식) · 계정(계정 정보) · 가방 · 다이어리 · 방명록(준비 중)
-   - 코브 몰 회원가입·로그인 창(서로 오가는 링크) + 상단 메뉴 👤 버튼도 여기 (아이디(영문+숫자) + 비밀번호로 로그인, 닉네임은 따로 마음대로 → 로그인 중이면 들판 코브 이름표가 내 닉네임)
+   - 코브 몰 회원가입·로그인 창(서로 오가는 링크) + 상단 메뉴 👤 버튼도 여기 (처음 온 손님은 회원가입 창, 계정이 있으면 로그인 창) (아이디(영문+숫자) + 비밀번호로 로그인, 닉네임은 따로 마음대로 → 로그인 중이면 들판 코브 이름표가 내 닉네임)
    - 로그아웃하면 내 오피스(프로필·탭)를 잠그고 로그인 버튼만 보여 줌, 아이디 정하기(옛 계정만)·비밀번호 바꾸기는 계정 탭
    - 모든 기록은 가방(mall.js의 covvWallet)과 같이 이 브라우저에 저장. 로그인이 생기면 계정으로 옮김
    - 미니룸 3D(office.js)는 이 화면을 처음 열 때 screens.js가 불러옴
@@ -547,12 +547,12 @@ function closable(d){
 function paintNav(){
   if(!navAcct) return;
   const m=W.signedIn(), name=W.profile().name;
-  navAcct.querySelector('[data-acct-label]').textContent=m?name:'로그인';
+  navAcct.querySelector('[data-acct-label]').textContent=m?name:W.member()?'로그인':'회원가입';
   navAcct.setAttribute('aria-label',m?`내 계정 · ${name}`:'로그인 · 회원가입');
   navAcct.classList.toggle('on',m);
 }
 if(navAcct) navAcct.addEventListener('click',e=>{
-  if(!W.signedIn()){ openLogin(); return; }   // 로그인 창 (회원가입은 창 안 링크로)
+  if(!W.signedIn()){ if(W.member()) openLogin(); else openJoin(); return; }   // 계정이 있으면 로그인 창, 처음 온 손님은 회원가입 창 (계정 없이 로그인 창을 열면 무엇을 넣어도 '계정이 없어요'만 나옴)
   showTab('account');   // 로그인 중이면 내 오피스 계정 탭으로 (이미 열려 있으면 탭만 바꿈)
   if(window.covvOpenScreen) window.covvOpenScreen('office',e.detail===0?{}:{x:e.clientX,y:e.clientY});
 });

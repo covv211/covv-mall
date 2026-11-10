@@ -14,7 +14,11 @@ const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const screens=Object.create(null);   // 주소 #constructor · #__proto__ 같은 이름이 화면으로 잘못 잡히지 않게 (기본 객체 속성이 없는 빈 목록)
 document.querySelectorAll('.screen[data-screen]').forEach(s=>{ screens[s.dataset.screen]=s; s.tabIndex=-1; });
 if(fieldEl) fieldEl.tabIndex=-1;
-let current=null, busy=false, officeLoaded=false;
+let current=null, busy=false, officeLoaded=false, backPending=false;   // backPending: 주문서에서 뒤로 가기를 불렀고 아직 popstate가 안 옴 (그사이 또 누르면 무시)
+// 주문서 기록 바로 앞이 코브 몰인지 = 그 기록에 적어 둔 표시 (앞으로 가기로 돌아와도 맞음) → '← 코브 몰로' · Esc는 새 기록을 쌓지 않고 뒤로 가기 (쌓으면 뒤로가기가 주문서로 빙빙 돎)
+const fromMall=()=>!!(history.state&&history.state.fromMall)&&location.hash==='#checkout';
+const scrollMem=Object.create(null);   // 화면별 마지막 스크롤 — 주문서에서 코브 몰로 돌아오면 보던 진열대 자리 그대로
+const BASE_TITLE=document.title;       // 들판 제목 (화면을 열면 '소개 · 코브 몰'처럼 바꿈 → 탭 · 방문 기록 · 화면낭독기가 지금 화면을 앎)
 
 const center=()=>({x:innerWidth/2,y:innerHeight/2});
 function point(o){   // 전환 동그라미의 시작점 (화면 밖이면 안쪽으로)
@@ -49,7 +53,7 @@ function loadOffice(){
   if(!window.THREE){ if(st) st.classList.add('no-webgl'); return; }
   officeLoaded=true;
   if(st) st.classList.remove('no-webgl');
-  loadScript('office.js?v=1109a')
+  loadScript('office.js?v=1110b')
     .catch(()=>{   // 한 번 실패해도 다음에 열 때 다시 시도
       officeLoaded=false;
       document.querySelectorAll('script[data-office]').forEach(s=>s.remove());
@@ -57,10 +61,11 @@ function loadOffice(){
     });
 }
 
-function setNav(id){ document.querySelectorAll('.nav [data-go]').forEach(a=>a.classList.toggle('active',a.dataset.go===id)); }
+function setNav(id){ if(id==='checkout') id='mall'; document.querySelectorAll('.nav [data-go]').forEach(a=>a.classList.toggle('active',a.dataset.go===id)); }   // 주문서는 코브 몰 안의 화면
 
 // 전환 중에 뒤로/앞으로가 눌렸어도, 끝난 뒤 주소에 맞춰 화면을 맞춤
 function sync(){
+  backPending=false;
   const id=location.hash.slice(1), want=screens[id]?id:null;
   if(want!==current){ if(want) open(want,{push:false}); else close({push:false}); }
 }
@@ -72,14 +77,16 @@ async function open(id,opts={}){
   try{
     const p=point(opts);
     if(!opts.instant) await irisIn(p.x,p.y);
-    if(current) screens[current].classList.remove('open');
-    s.classList.add('open'); s.scrollTop=0;
+    const from=current;
+    if(current){ scrollMem[current]=screens[current].scrollTop; screens[current].classList.remove('open'); }
+    s.classList.add('open'); s.scrollTop=id==='mall'&&from==='checkout'?(scrollMem.mall||0):0;
     document.body.classList.add('screen-open');
     current=id;
+    const label=s.getAttribute('aria-label')||''; document.title=label&&label!=='코브 몰'?`${label} · 코브 몰`:BASE_TITLE;   // '코브 몰 · 코브 몰'이 되지 않게
     dispatchEvent(new CustomEvent('covv-screen',{detail:id}));   // 코브 몰 화면이 열릴 때 내용 새로 그림
     if(window.covvField) window.covvField.pause();
     if(id==='office') loadOffice();
-    if(opts.push!==false) history.pushState({screen:id},'','#'+id);
+    if(opts.push!==false) history.pushState({screen:id,fromMall:id==='checkout'&&from==='mall'&&location.hash==='#mall'},'','#'+id);   // 전환 중에 뒤로 가기로 주소가 이미 바뀌었으면 표시 안 함
     setNav(id);
     if(!opts.instant) await irisOut();
   } finally { busy=false; irisReset(); }
@@ -95,7 +102,7 @@ async function close(opts={}){
     if(!opts.instant) await irisIn(p.x,p.y);
     screens[current].classList.remove('open');
     document.body.classList.remove('screen-open');
-    current=null;
+    current=null; document.title=BASE_TITLE;
     dispatchEvent(new CustomEvent('covv-screen',{detail:null}));
     if(opts.push!==false) history.pushState({},'',location.pathname+location.search);
     setNav(null);
@@ -135,6 +142,7 @@ document.addEventListener('click',e=>{
   if(go){
     e.preventDefault();
     const id=go.dataset.go;
+    if(id==='mall'&&current==='checkout'&&(fromMall()||backPending)){ if(!busy&&!backPending){ backPending=true; history.back(); } return; }   // 주문서 → 코브 몰: 앞 기록으로 돌아감 (popstate → sync가 엶) · 전환 중이나 두 번 눌러도 한 번만
     const kb=e.detail===0;   // 키보드로 누른 경우 화면 가운데서 전환
     // 들판에 있을 땐 해당 코브의 거품이 보이면 터트려서 이동 (안 보이면 바로 이동)
     if(!current&&window.covvField&&window.covvField.popTo(id)) return;
@@ -151,6 +159,7 @@ addEventListener('keydown',e=>{
   if(e.key!=='Escape'||!current||e.defaultPrevented||e.isComposing) return;
   const t=e.target;   // 글 입력칸에서 Esc는 '입력 취소'이지 화면 닫기가 아님 (체크박스·라디오·버튼은 화면 닫기)
   if(t&&(t.isContentEditable||/^(TEXTAREA|SELECT)$/.test(t.tagName)||(t.tagName==='INPUT'&&!/^(checkbox|radio|button|submit|reset)$/.test(t.type)))) return;
+  if(current==='checkout'){ if(fromMall()||backPending){ if(!busy&&!backPending){ backPending=true; history.back(); } } else open('mall'); return; }   // 주문서에서 Esc = '← 코브 몰로' (들판까지 나가지 않음)
   close();
 });
 addEventListener('popstate',sync);

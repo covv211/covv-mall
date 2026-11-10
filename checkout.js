@@ -23,6 +23,7 @@ SELL.forEach(p=>{
   const os=(A.OPTIONS&&Array.isArray(A.OPTIONS[p.id]))?A.OPTIONS[p.id]:[];
   (os.some(o=>o&&o.id===p.id)?os:[{id:p.id},...os]).forEach(o=>{
     if(!o||typeof o.id!=='string'||SKUS.some(x=>x.id===o.id)) return;   // 다른 상품과 겹친 id는 버림 (장바구니 줄이 섞이지 않게)
+    if(o.id!==p.id&&!o.img&&!A.PREVIEW) return;   // 자기 사진이 없는 종류는 공개 화면에서 뺌 — '흰 호랑이'를 골라도 주황 호랑이 사진 그대로 담기면 본 적 없는 물건을 주문하게 됨 (미리보기에선 그대로 보여서 고르기 칸을 볼 수 있음)
     SKUS.push({id:o.id, base:p.id, name:o.name||p.name, img:o.img||p.img, paper:o.paper||p.paper, price:o.price||p.price, desc:o.desc||p.desc, shots:o.shots||p.shots, story:o.story||p.story});
   });
 });
@@ -35,10 +36,12 @@ const noProto=(k,v)=>k==='__proto__'?undefined:v;
 
 /* ══════════ 장바구니 ══════════ */
 // 줄 모양 맞추기 — 저장소는 손님이 바꿀 수 있으니 아는 상품 · 1~99개 · 최대 20줄만 (같은 상품 두 줄은 합침)
+const goneIds=new Set();   // 불러온 장바구니에서 빠진 상품 (진열대에서 내려갔거나 공개 화면에서 뺀 종류) — 처음 코브 몰 · 주문서를 열 때 한 번 알림
 function cleanLines(v){
   const out=[];
   if(!Array.isArray(v)) return out;
   for(const it of v.slice(0,50)){
+    if(it&&typeof it==='object'&&typeof it.id==='string'&&!byId(it.id)) goneIds.add(it.id.slice(0,40));
     if(!it||typeof it!=='object'||typeof it.id!=='string'||!byId(it.id)||typeof it.qty!=='number'||!(it.qty>=1)) continue;
     const q=Math.min(R.QTY_MAX,Math.floor(it.qty)), have=out.find(x=>x.id===it.id);
     if(have) have.qty=Math.min(R.QTY_MAX,have.qty+q);
@@ -48,12 +51,14 @@ function cleanLines(v){
 }
 let cart=[];
 try{ cart=cleanLines(JSON.parse(localStorage.getItem(CART_KEY)||'[]',noProto)); }catch(e){}
+const goneN=goneIds.size; goneIds.clear(); let goneTold=false;   // 처음 불러올 때 것만 셈 (다른 탭 storage로 다시 정리할 때는 안 셈)
 function saveCart(){
   try{ if(cart.length) localStorage.setItem(CART_KEY,JSON.stringify(cart)); else localStorage.removeItem(CART_KEY); }catch(e){}
   paintCartN();
 }
 const cartCount=()=>cart.reduce((n,x)=>n+x.qty,0);
 function paintCartN(){ document.querySelectorAll('[data-cart-n]').forEach(b=>{ b.textContent=cartCount(); }); }
+if(goneN) saveCart();   // 빠진 줄을 저장소에서도 지움 (다음에 또 알리지 않게) — cartCount · paintCartN 선언 뒤에 (앞이면 TDZ 오류로 이 파일 전체가 멈춤)
 function addToCart(id,qty){
   const p=byId(id), have=cart.find(x=>x.id===id);
   if(!p) return false;
@@ -107,11 +112,14 @@ function paintMore(p){
   box.textContent='';
   shots.forEach((s,i)=>{ const f=el('figure','pd-shot'), im=el('img'); im.src=s; im.alt=`${p.name} 사진 ${i+2}`; im.loading='lazy'; im.decoding='async'; im.width=im.height=560; f.append(im); box.append(f); });
   // ↑ width·height = 불러오기 전에도 네모 자리를 잡아 둠(아래 소개가 덜 밀림), 불러오면 사진 비율대로
-  if(!shots.length) for(let i=0;i<SHOT_HOLES;i++){ const h=el('div','pd-shot hole','사진 자리'); h.setAttribute('aria-hidden','true'); box.append(h); }
+  if(!shots.length&&A.PREVIEW) for(let i=0;i<SHOT_HOLES;i++){ const h=el('div','pd-shot hole','사진 자리'); h.setAttribute('aria-hidden','true'); box.append(h); }   // 빈 사진 자리는 미리보기에서만 (공개 화면에선 만들다 만 것처럼 보임)
+  box.hidden=!box.childElementCount;
   $d('[data-pd-shots-todo]').hidden=shots.length>0;
   st.textContent='';
   String(p.story||p.desc||'').split('\n').map(t=>t.trim()).filter(Boolean).forEach(t=>st.append(el('p',null,t)));   // 줄바꿈 = 문단
   $d('[data-pd-story-todo]').hidden=!!p.story;
+  $d('.pd-story').hidden=!p.story&&!A.PREVIEW;   // 소개 글이 없으면 이름 밑 한 줄(desc)과 똑같은 글을 두 번 보여 주지 않음
+  $d('.pd-more').hidden=box.hidden&&$d('.pd-story').hidden;
 }
 /* ── 리뷰 (고르기 · 구매 칸 맨 밑): 한 장씩 넘어가는 카드 (Swiper speed 1500 · autoplay delay 2000과 같게) ── */
 // 끌기(마우스 · 손가락) · 트랙패드로 옆으로 밀기 · ‹ › 로도 넘김. 마우스를 올려 둔 동안 · 키보드로 버튼에 온 동안 · ⏸ · 안 보일 때(창 닫힘 · 칸 밖 · 탭 숨김)는 멈춤
@@ -172,7 +180,7 @@ function paintReviews(){   // 상품을 열 때마다 첫 카드부터 (지금�
   list.forEach((r,j)=>{ const c=card(r); if(!j) c.classList.add('on'); rvTrack.append(c); dots.append(el('span',j?null:'on')); });   // 첫 카드 · 점은 처음부터 켬 → 동작 줄이기에서 창을 열 때 빈 칸에서 페이드로 시작하지 않음
   if(rvH){ rvTrack.prepend(...list.slice(-rvH).map(r=>card(r,true))); list.slice(0,rvH).forEach(r=>rvTrack.append(card(r,true))); }   // 앞엔 끝 카드들, 뒤엔 처음 카드들 (Swiper loop처럼 양 끝이 이어짐)
   rvTrack.style.setProperty('--h',rvH);
-  $d('[data-rv-count]').textContent=rvN||'';
+  $d('[data-rv-count]').textContent=rvN?`${rvN}개 · 예시`:'';   // 실제 리뷰 수처럼 보이지 않게
   $d('.pd-rv-ctrl').hidden=dots.hidden=rvN<2; rvBox.hidden=!rvN; $d('[data-rv-empty]').hidden=rvN>0;
   rvHover=rvKey=false; rvDrag=null; rvAt=0; rvTrack.classList.remove('drag'); rvJump(0,true); rvGo(0);
 }
@@ -249,6 +257,7 @@ function openProduct(id){
   const n=R.coupons(W.get('coin'));
   $d('#pdCoupon').textContent=n?`금화 쿠폰 ${n}장 있음 · 키링 1개당 ${R.COUPON_WON}원 할인`:`금화 ${R.COUPON_COINS}개를 모으면 키링 1개 ${R.COUPON_WON}원 할인`;
   $d('#pdShip').textContent=`${won(R.SHIP_FEE)} · 상품 ${won(R.SHIP_FREE)} 이상이면 무료`;
+  if(!dlg.showModal){ goCheckout('now',[{id,qty:1}]); return; }   // <dialog>를 모르는 옛 브라우저(iOS 15.3 이하) → 창 대신 바로 주문서로 (살 길이 막히지 않게)
   if(!dlg.open) dlg.showModal();
   dlg.scrollTop=0; $d('.pd-info').scrollTop=0; if(optBox) optBox.scrollLeft=0;   // 다른 상품을 열면 맨 위(큰 사진)부터 · 휴대폰 종류 띠도 처음부터
   paintReviews();   // 창이 열린 뒤 (열려 있어야 자동 넘김이 켜짐)
@@ -332,7 +341,7 @@ root.innerHTML=`
         <p class="fine">결제는 코브 몰이 문을 열면 시작해요. 지금은 눌러도 돈이 나가지 않아요.</p>
       </section>
     </div>
-    <aside class="co-sum" aria-labelledby="coSumTitle">
+    <aside class="co-sum" data-co-sum aria-labelledby="coSumTitle">
       <h3 id="coSumTitle">최종 결제 금액</h3>
       <dl>
         <div><dt>상품 금액</dt><dd data-co-subtotal></dd></div>
@@ -344,9 +353,11 @@ root.innerHTML=`
       <label class="co-check co-agree"><input type="checkbox" id="coAgree"> 주문 내용을 확인했고 결제에 동의해요</label>
       <button type="button" class="co-pay-btn" data-co-pay>결제하기</button>
       <p class="co-err" data-co-err role="alert"></p>
+      <p class="co-note" data-co-note role="status"></p>
       <p class="sr-only" data-co-live aria-live="polite"></p>
     </aside>
   </div>
+  <div class="co-bar" data-co-bar hidden><span>총 결제 금액 <b></b></span><button type="button" class="co-btn" data-co-jump>결제하러 가기 ↓</button></div>
 `;
 }
 const $=s=>root.querySelector(s);
@@ -396,6 +407,8 @@ function paint(){
   $('[data-co-total]').textContent=ok?won(q.total):'0원';
   $('[data-co-ship-note]').textContent=!ok?'':q.subtotal<R.SHIP_FREE?`${won(R.SHIP_FREE-q.subtotal)} 더 담으면 배송비 무료`:'배송비 무료예요 🎉';
   const pay=$('[data-co-pay]'); pay.disabled=!ok; pay.textContent=ok?`${won(q.total)} 결제하기`:'결제하기';
+  $('[data-co-note]').textContent='';
+  const bar=$('[data-co-bar]'); if(bar){ bar.hidden=!ok; bar.querySelector('b').textContent=ok?won(q.total):''; }
 }
 function setQty(id,step){
   const it=lines().find(x=>x.id===id); if(!it) return;
@@ -408,6 +421,7 @@ function setQty(id,step){
 }
 if(root){
   root.addEventListener('click',e=>{
+    if(e.target.closest('[data-co-jump]')){ const sum=$('[data-co-sum]'); sum.scrollIntoView({block:'start',behavior:RM.matches?'auto':'smooth'}); $('#coAgree').focus({preventScroll:true}); return; }   // 휴대폰 아래 띠 → 최종 결제 금액 칸으로
     const s=e.target.closest('[data-step]');
     if(s){ setQty(s.dataset.id,Number(s.dataset.step)); return; }
     const d=e.target.closest('[data-del]');
@@ -416,7 +430,7 @@ if(root){
       const err=$('[data-co-err]'), agree=$('#coAgree');
       if(!agree.checked){ err.textContent='주문 내용을 확인하고 동의에 체크해 주세요'; agree.focus(); return; }
       err.textContent='';
-      toast('🚧 아직 결제는 열리지 않았어요. 코브 몰이 문을 열면 여기서 결제해요 (금화는 그대로예요)');
+      $('[data-co-note]').textContent='🚧 아직 결제는 열리지 않았어요. 코브 몰이 문을 열면 여기서 결제해요 — 돈은 나가지 않았고 금화도 그대로예요';   // 토스트는 몇 초 뒤 사라져서 결제 버튼 밑에 남김
     }
   });
   root.addEventListener('change',e=>{
@@ -425,7 +439,12 @@ if(root){
   });
 }
 
-addEventListener('covv-screen',e=>{ isOpen=e.detail==='checkout'; closePd(); if(isOpen) paint(); });   // 뒤로·앞으로로 화면이 바뀌어도 상품 창은 닫음
+addEventListener('covv-screen',e=>{
+  isOpen=e.detail==='checkout'; closePd(); if(isOpen) paint();   // 뒤로·앞으로로 화면이 바뀌어도 상품 창은 닫음
+  if(goneN&&!goneTold&&(e.detail==='mall'||isOpen)){ goneTold=true; toast(`🧺 진열대에서 내려간 상품 ${goneN}개는 장바구니에서 뺐어요`); }
+});
+// 휴대폰(한 줄 배치)에서 최종 결제 금액 칸이 화면에 보이면 아래 띠를 숨김 — 같은 금액이 두 번 보이지 않게 (넓은 화면은 style.css가 띠를 늘 숨김)
+if(root&&'IntersectionObserver' in window){ const bar=$('[data-co-bar]'); new IntersectionObserver(es=>{ bar.classList.toggle('off',es[es.length-1].isIntersecting); }).observe($('[data-co-sum]')); }
 W.on(()=>{ if(isOpen) paint(); });   // 들판·다른 탭에서 금화가 바뀌면 할인도 다시
 addEventListener('storage',e=>{
   if(e.key!==CART_KEY) return;
