@@ -383,7 +383,7 @@ body.screen-open .field { visibility: hidden; }
 .bag-hud:focus-visible, .kr-btn:focus-visible, .sw:focus-visible, .nav-acct:focus-visible, .sns-link:focus-visible, .join-x:focus-visible, .join-link:focus-visible, .join-forgot summary:focus-visible, .privacy-note a:focus-visible, .pv-sec a:focus-visible,
 .kr-pic:focus-visible, .kr-buy.go:focus-visible, .mall-sort button:focus-visible, .mall-cart:focus-visible, .qty button:focus-visible, .pd-opt:focus-visible, .pd-cart:focus-visible, .pd-buy:focus-visible, .pd-rv-btn:focus-visible, .co-btn:focus-visible, .co-del:focus-visible, .co-pay-btn:focus-visible, .co-check input:focus-visible, .co-pay input:focus-visible + span,
 .hero-play:focus-visible, .hero-shop:focus-visible, .go-top:focus-visible, .mall-have:focus-visible, .faq summary:focus-visible, .foot-links a:focus-visible,
-.mall-search-x:focus-visible, .mall-search-go:focus-visible, .kr-none-hint:focus-visible, .kr-none-all:focus-visible, .pd-tip:focus-visible, .tip-btn:focus-visible {
+.mall-search-x:focus-visible, .mall-search-go:focus-visible, .kr-none-hint:focus-visible, .kr-none-all:focus-visible, .pd-tip:focus-visible, .tip-btn:focus-visible, .pd-share:focus-visible, .pd-gosi summary:focus-visible, .pd-rv-write:focus-visible, .rw-select:focus-visible, .rw-text textarea:focus-visible, .rw-pics button:focus-visible {
     outline: 3px solid var(--accent);
     outline-offset: 2px;
 }
@@ -612,6 +612,7 @@ body.pv { height: auto; overflow: auto; background: var(--bg); }
 .fine { color: var(--muted); font-size: 14px; }
 .todo { display: none; }   /* ✏️ 주인님이 채울 곳 안내 — 공개 사이트에선 숨기고 미리보기(내 컴퓨터, html.preview — mall.js)에서만 */
 .preview .todo { display: revert; }
+.preview .todo[hidden] { display: none; }   /* 미리보기에서도 채운 곳의 안내는 숨김 (revert가 hidden을 이기지 않게) */
 .mall-bag { padding: 24px; border-radius: 22px; background: var(--card); box-shadow: 0 1px 0 var(--line), 0 12px 32px rgba(15, 20, 40, .06); }
 .bag-items { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .bag-items li { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 4px; border-radius: 14px; background: var(--bg); }
@@ -774,14 +775,16 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
 /* ── 상품 창 (즉시구매 · 장바구니 담기) ── */
 .pd { width: min(1170px, calc(100% - 32px)); max-height: calc(100% - 32px); margin: auto; padding: 0; border: 0; border-radius: 26px; background: var(--card); color: var(--ink); box-shadow: 0 1px 0 var(--line), 0 24px 60px rgba(60, 20, 50, .28); overflow: auto; }
 .pd::backdrop { background: rgba(40, 20, 40, .45); }
-/* 상품 창 스크롤바: 가늘게 · 창 안쪽으로 (기본 막대는 창 오른쪽 끝에 붙어서 둥근 모서리 밖으로 삐져나옴)
-   폭 14px 중 가운데 6px만 칠함(투명 테두리 4px) → 창 끝에서 4px 안쪽, 위아래는 모서리 둥글기(26px)만큼 비움 · 오른쪽 정보 칸(.pd-info)이 따로 스크롤될 때도 같은 모양 */
+/* 창 스크롤바: 가늘게 · 창 안쪽으로 (기본 막대는 창 오른쪽 끝에 붙어서 둥근 모서리 밖으로 삐져나옴)
+   상품 창(.pd · 따로 스크롤되는 정보 칸 .pd-info) · 회원가입 · 로그인 창(.join) · 안내 · 리뷰 쓰기 창의 내용 칸(.tip-body) 모두 같은 모양
+   폭 14px 중 가운데 6px만 칠함(투명 테두리 4px) → 창 끝에서 4px 안쪽, 위아래는 모서리 둥글기(26px)만큼 비움 (.tip-body는 위아래가 머리 · 단추 줄이라 8px만) */
 @media (hover: hover) and (pointer: fine) {   /* 마우스 기기만 — 휴대폰은 원래 가는 막대가 내용 위에 떴다 사라짐 */
-    .pd::-webkit-scrollbar, .pd-info::-webkit-scrollbar { width: 14px; }
-    .pd::-webkit-scrollbar-track, .pd-info::-webkit-scrollbar-track { margin: 26px 0; background: none; }
-    .pd::-webkit-scrollbar-thumb, .pd-info::-webkit-scrollbar-thumb { border: 4px solid transparent; border-radius: 999px; background: rgba(120, 70, 100, .32) padding-box; }
-    .pd::-webkit-scrollbar-thumb:hover, .pd-info::-webkit-scrollbar-thumb:hover { background-color: rgba(120, 70, 100, .55); }
-    @supports not selector(::-webkit-scrollbar) { .pd, .pd-info { scrollbar-width: thin; scrollbar-color: rgba(120, 70, 100, .32) transparent; } }   /* 파이어폭스 (크롬은 이 두 줄이 있으면 위 -webkit- 모양을 버려서 따로) */
+    .pd::-webkit-scrollbar, .pd-info::-webkit-scrollbar, .join::-webkit-scrollbar, .tip-body::-webkit-scrollbar { width: 14px; }
+    .pd::-webkit-scrollbar-track, .pd-info::-webkit-scrollbar-track, .join::-webkit-scrollbar-track { margin: 26px 0; background: none; }
+    .tip-body::-webkit-scrollbar-track { margin: 8px 0; background: none; }
+    .pd::-webkit-scrollbar-thumb, .pd-info::-webkit-scrollbar-thumb, .join::-webkit-scrollbar-thumb, .tip-body::-webkit-scrollbar-thumb { border: 4px solid transparent; border-radius: 999px; background: rgba(120, 70, 100, .32) padding-box; }
+    .pd::-webkit-scrollbar-thumb:hover, .pd-info::-webkit-scrollbar-thumb:hover, .join::-webkit-scrollbar-thumb:hover, .tip-body::-webkit-scrollbar-thumb:hover { background-color: rgba(120, 70, 100, .55); }
+    @supports not selector(::-webkit-scrollbar) { .pd, .pd-info, .join, .tip-body { scrollbar-width: thin; scrollbar-color: rgba(120, 70, 100, .32) transparent; } }   /* 파이어폭스 (크롬은 이 두 줄이 있으면 위 -webkit- 모양을 버려서 따로) */
 }
 .pd[open] { animation: joinIn .24s ease; }
 @media (prefers-reduced-motion: reduce) { .pd[open] { animation-name: joinFade; } }
@@ -806,9 +809,21 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
 .pd-story { display: flex; flex-direction: column; gap: 12px; padding: 24px 26px; border-radius: 18px; background: var(--card); box-shadow: 0 1px 0 rgba(91, 53, 36, .12), 0 12px 28px rgba(91, 53, 36, .1); word-break: keep-all; }
 .pd-story h3, .pd-review h3 { font-family: var(--hand); font-size: 24px; font-weight: 700; letter-spacing: -.04em; line-height: 1.1; color: #5b3350; }
 .pd-story-text { display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.75; }
+/* 상품 정보 제공 고시: 상품 소개 아래 접어 둔 표 (값은 mall.js INFO — 빈 칸은 흐리게 '판매를 시작할 때 적어요') */
+.pd-gosi { padding: 2px 20px; border-radius: 18px; background: var(--card); box-shadow: 0 1px 0 rgba(91, 53, 36, .12), 0 12px 28px rgba(91, 53, 36, .1); }
+.pd-gosi summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 2px; font-size: 15.5px; font-weight: 800; list-style: none; cursor: pointer; }
+.pd-gosi summary::-webkit-details-marker { display: none; }
+.pd-gosi summary::after { content: "▾"; color: var(--muted); transition: rotate .2s; }
+.pd-gosi[open] summary::after { rotate: 180deg; }
+.pd-gosi-list { display: grid; grid-template-columns: 124px minmax(0, 1fr); border-top: 1.5px solid var(--ink); font-size: 13.5px; }
+.pd-gosi-list dt, .pd-gosi-list dd { padding: 9px 2px; border-bottom: 1.5px dashed var(--line); word-break: keep-all; }
+.pd-gosi-list dt { color: var(--muted); }
+.pd-gosi-list dd { font-weight: 600; }
+.pd-gosi-list dd.empty { color: var(--muted); font-weight: 500; }
+.pd-gosi .fine { margin: 10px 0 14px; font-size: 12.5px; word-break: keep-all; }
 .pd-review { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; padding-top: 18px; border-top: 1.5px dashed var(--line); }   /* 고르기 · 구매 칸 맨 밑: 한 장씩 1.5초 동안 넘어가고 2초 쉬는 리뷰 카드 (checkout.js) */
 .pd-rv-head { display: flex; align-items: center; gap: 10px; }
-.pd-rv-head h3 { flex: 1; }
+.pd-rv-title { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }   /* 제목 · 개수 + ⓘ(리뷰 운영 안내 — 제목 이름에 섞이지 않게 h3 밖) */
 .pd-rv-count { color: var(--muted); font-size: 18px; font-variant-numeric: tabular-nums; }
 .pd-rv-ctrl { display: flex; gap: 6px; }
 .pd-rv-ctrl[hidden] { display: none; }   /* 리뷰가 하나뿐이면 넘길 것도 없음 */
@@ -844,6 +859,14 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
 .pd-info { position: sticky; top: 0; align-self: start; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; gap: 10px; padding: 30px 28px 24px; overflow-y: auto; word-break: keep-all; }   /* 크기 그대로 창 위쪽에 붙어 있음 (왼쪽 칸이 길어져도 같이 늘어나지 않게 align-self: start) · 창보다 길면 이 칸만 스크롤 (휴대폰 가로는 주소창 때문에 dvh, 없는 브라우저는 앞의 vh) */
 .pd-info h2 { font-family: var(--hand); font-size: 32px; font-weight: 700; letter-spacing: -.04em; line-height: 1.1; color: #5b3350; }
 .pd-desc { color: var(--muted); font-size: 14.5px; }
+.pd-size { font-size: 14px; font-weight: 700; }   /* 크기 · 소재 한 줄 (INFO에 있을 때만) */
+.pd-size[hidden] { display: none; }
+.pd-price-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }   /* 가격 + 🔗 공유 (좁으면 공유가 다음 줄) */
+.pd-share { margin-left: auto; padding: 6px 12px 7px; border: 0; border-radius: 999px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line); color: var(--ink); font-size: 13.5px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background .2s; }
+.pd-share:hover { background: var(--accent-soft); }
+.pd-share-box { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 12px; border-radius: 12px; background: var(--bg); color: var(--muted); font-size: 13px; }   /* 복사가 막힌 브라우저: 링크를 직접 */
+.pd-share-box[hidden] { display: none; }
+.pd-share-box input { flex: 1 1 200px; min-width: 0; padding: 8px 10px; border: 0; border-radius: 8px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line); color: var(--ink); font: inherit; font-size: 13px; }
 .pd-price { font-size: 16px; font-weight: 700; }
 .pd-price b { font-size: 30px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .pd-soon { display: inline-block; margin-left: 6px; padding: 2px 9px 3px; border-radius: 999px; font-size: 12.5px; vertical-align: 5px; }   /* 오픈 전 표시 — 다 담고 결제를 눌러서야 못 산다는 걸 알지 않게 (색은 아래 오픈 전 안내 묶음) */
@@ -885,9 +908,67 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
 .tip-notice li { position: relative; padding-left: 12px; word-break: keep-all; }   /* flex로 두면 글 속 숫자(<span data-r>)가 따로 떨어져 '100 개'처럼 벌어짐 */
 .tip-notice li::before { content: "·"; position: absolute; top: 0; left: 2px; }
 .tip-actions { flex: none; display: flex; gap: 8px; padding: 14px 28px 20px; border-top: 1.5px dashed var(--line); }
-.tip-btn { flex: 1; padding: 14px 10px; border: 0; border-radius: 14px; background: #cc3a82; color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; }   /* 상품 창 '즉시구매' · '장바구니 담기'와 같은 단추 */
+.tip-btn { flex: 1; padding: 14px 10px; border: 0; border-radius: 14px; background: #cc3a82; color: #fff; font-size: 16px; font-weight: 800; word-break: keep-all; cursor: pointer; }   /* 상품 창 '즉시구매' · '장바구니 담기'와 같은 단추 */
 .tip-btn.ghost { background: var(--card); box-shadow: inset 0 0 0 1.5px #cc3a82; color: #b0306e; }
 .tip-btn[hidden] { display: none; }
+.tip-btn:disabled { opacity: .5; cursor: default; }   /* 리뷰 쓰기: 사진을 줄이는 동안 등록 단추 */
+.tip-btn.danger { flex: none; padding: 14px 16px; box-shadow: inset 0 0 0 1.5px var(--line); color: #c0304a; }   /* 리뷰 쓰기 '지우기' (두 번 눌러야 지움) */
+
+/* ── 리뷰 쓰기 (멘케트 상품 상세 리뷰 쓰기 창 — 상품 줄 → 만족도 별 → 종류 · 크기 · 품질 → 글 → 사진 → 취소 · 리뷰 등록) ──
+   멘케트처럼 아래에서 0.3초 일정한 빠르기로 올라옴 (동작 줄이기면 페이드), 휴대폰은 다른 안내 창과 같은 아래 시트 */
+.tip.rw { width: min(600px, calc(100% - 32px)); }
+.tip.rw[open] { animation: rwUp .3s linear; }
+@keyframes rwUp { from { translate: 0 60vh; } }
+@media (prefers-reduced-motion: reduce) { .tip.rw[open] { animation: joinFade .2s ease-out; } }
+.tip-notice .join-link { align-self: flex-start; font-size: 13px; }   /* '리뷰 운영 안내 보기' */
+.rw-product { display: flex; align-items: center; gap: 14px; }
+.rw-thumb { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 14px; }   /* 바탕 = 그 키링의 색종이 색 (checkout.js) */
+.rw-thumb img { width: 86%; height: auto; filter: drop-shadow(0 2px 3px rgba(91, 53, 36, .22)); }
+.rw-name { font-size: 16px; font-weight: 800; word-break: keep-all; }
+.rw-sub { color: var(--muted); font-size: 13px; word-break: keep-all; }
+.rw-field { display: flex; align-items: center; gap: 12px; }
+.rw-label { flex: none; width: 52px; color: var(--muted); font-size: 14px; font-weight: 700; }
+.rw-stars { display: flex; }
+.rw-star { display: block; cursor: pointer; }
+.rw-star span[aria-hidden] { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; color: #e8dfe5; font-size: 30px; line-height: 1; transition: color .15s, scale .15s; }
+.rw-star.on span[aria-hidden] { color: #f2a93b; }
+.rw-star input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: -2px; }   /* 고른 표시 · 포커스는 input 바로 뒤 span에 (:has()를 모르는 브라우저에서도) */
+@media (hover: hover) { .rw-star:hover span[aria-hidden] { scale: 1.12; } }
+.rw-score { color: var(--muted); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rw-select { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--line); color: var(--ink); font: inherit; font-size: 15px; font-weight: 600; }
+.rw-select:disabled { opacity: 1; color: var(--ink); }   /* 종류가 하나뿐이어도 이름은 또렷하게 */
+.rw-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rw-chip { display: block; cursor: pointer; }
+.rw-chip span { display: block; padding: 8px 14px 9px; border-radius: 999px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line); color: var(--muted); font-size: 14px; font-weight: 700; transition: background .2s, color .2s; }
+.rw-chip input:checked + span { background: #cc3a82; box-shadow: none; color: #fff; }
+.rw-chip input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+.rw-text { position: relative; }
+.rw-text textarea { display: block; width: 100%; min-height: 150px; padding: 14px 14px 30px; border: 0; border-radius: 14px; background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--line); color: var(--ink); font: inherit; font-size: 15px; line-height: 1.6; resize: vertical; }
+.rw-text textarea::placeholder { color: var(--muted); }
+.rw-count { position: absolute; right: 14px; bottom: 10px; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.rw-photo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rw-add { display: block; cursor: pointer; }
+.rw-add-box { display: grid; place-items: center; align-content: center; width: 72px; height: 72px; border-radius: 14px; background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--line); color: var(--muted); font-size: 22px; line-height: 1.1; }
+.rw-add.full { opacity: .45; cursor: default; }
+.rw-add input:focus-visible + .rw-add-box { outline: 3px solid var(--accent); outline-offset: 2px; }
+.rw-add-n { font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rw-pics { display: flex; gap: 8px; }
+.rw-pics[hidden] { display: none; }
+.rw-pics li { position: relative; width: 72px; height: 72px; }
+.rw-pics img { width: 100%; height: 100%; border-radius: 14px; object-fit: cover; }
+.rw-pics button { position: absolute; top: -6px; right: -6px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: var(--ink); color: #fff; font-size: 11px; cursor: pointer; }
+.rw-pics button::after { content: ""; position: absolute; top: -10px; right: -10px; bottom: -10px; left: -10px; }   /* 누르는 곳만 44px로 */
+.rw-hint { flex-basis: 100%; color: var(--muted); font-size: 12.5px; }
+.rw-err { flex: none; padding: 10px 28px 0; color: #c0304a; font-size: 13.5px; font-weight: 700; word-break: keep-all; }   /* 단추 줄 바로 위 */
+.rw-err:empty { padding: 0; }   /* 비어도 숨기지 않음(role=alert가 접근성 트리에 남게) — 높이만 0 */
+/* 상품 창 리뷰: '리뷰 쓰기' 단추 · 내가 쓴 리뷰 카드 (이 브라우저에만 — 맨 앞) */
+.pd-rv-write { flex: none; padding: 6px 12px 7px; border: 0; border-radius: 999px; background: var(--card); box-shadow: inset 0 0 0 1.5px #cc3a82; color: #b0306e; font-size: 13.5px; font-weight: 800; cursor: pointer; transition: background .2s; }
+.pd-rv-write:hover { background: var(--accent-soft); }
+.pd-rv-card.mine { background: #fff6fa; box-shadow: inset 0 0 0 1.5px #f6d3e3; }
+.pd-rv-card.mine .pd-rv-text { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }   /* 긴 글이 카드 줄 전체를 늘리지 않게 4줄까지 · 손님 글은 긴 낱말도 끊어서 */
+.pd-rv-meta { color: var(--muted); font-size: 12.5px; font-weight: 700; word-break: keep-all; }
+.pd-rv-pics { display: flex; gap: 6px; }
+.pd-rv-pics img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
 .pd-opts { display: flex; flex-direction: column; gap: 10px; font-size: 15px; font-weight: 700; }   /* 색상 · 캐릭터 선택: 그 키링의 종류마다 사진 칸 75×75, 5개가 한 줄 */
 .pd-opts[hidden] { display: none; }   /* 종류가 하나뿐인 상품 */
 .pd-opt-list { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -970,6 +1051,7 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
 .co-sum .total dt { color: var(--ink); font-weight: 800; }
 .co-sum .total dd { color: #b0306e; font-size: 24px; font-weight: 800; }
 .co-agree { font-size: 14px; }
+.co-minor { margin-top: -4px; font-size: 12.5px; word-break: keep-all; }   /* 미성년자 취소 안내 (전자상거래법) */
 .co-pay-btn { width: 100%; padding: 15px 12px; border: 0; border-radius: 14px; background: #cc3a82; color: #fff; font-size: 17px; font-weight: 800; cursor: pointer; }
 .co-pay-btn:disabled { background: #efe9ee; color: #968c98; cursor: default; }
 .co-err { color: #c0304a; font-size: 13.5px; font-weight: 700; }
@@ -979,6 +1061,7 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
 .co-note:empty { display: none; }
 .co-soon { margin: -10px 0 20px; padding: 10px 14px; border-radius: 12px; font-size: 14px; }
 .mall-soon { width: fit-content; max-width: 100%; margin: -16px 0 22px; padding: 8px 14px; border-radius: 999px; font-size: 13.5px; }   /* 코브 몰 위 줄 아래: 진열대 카드에 가격이 보이니 예시라는 걸 먼저 */
+.mall-shipnote { margin: -14px 0 20px; word-break: keep-all; }   /* 진열대 위: 카드 가격 = 키링 값, 배송비 별도 (전자상거래법 — 가격을 처음 보여 주는 곳에서) */
 .co-bar { display: none; }   /* 휴대폰 아래 띠 '총 결제 금액 · 결제하러 가기' — 한 줄 배치(860px 이하)에서만 */
 .co-bar[hidden] { display: none; }
 @media (max-width: 860px) {
@@ -1283,11 +1366,19 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
     .tip { width: 100%; max-width: none; max-height: calc(100% - 48px); margin: auto 0 0; border-radius: 24px 24px 0 0; }
     .tip[open] { animation: tipUp .26s ease-out; }
     .tip-body { padding: 20px; }
+    .rw-err { padding-right: 20px; padding-left: 20px; }
     .tip-actions { padding: 12px 20px calc(14px + env(safe-area-inset-bottom)); }
     .tip-terms dt { width: 84px; }
+    .tip.rw { width: 100%; }   /* 위 .tip.rw의 600px 폭이 시트 폭(100%)을 이기지 않게 */
+    .tip.rw[open] { animation: tipUp .26s ease-out; }
+    .pd-rv-head { flex-wrap: wrap; row-gap: 8px; }   /* 리뷰 제목 · 개수는 한 줄 가득, 그 아래 리뷰 쓰기 · 넘기기 단추 (좁은 폭에서 제목이 세 줄로 접히지 않게) */
+    .pd-rv-title { flex-basis: 100%; }
+    .pd-rv-ctrl { margin-left: auto; }
+    .rw-select, .rw-text textarea { font-size: 16px; }   /* 16px보다 작으면 아이폰이 누를 때 화면을 확대함 */
+    .tip-btn.danger { flex: 1; padding-right: 8px; padding-left: 8px; }   /* 좁은 폭에서 '한 번 더'가 옆 단추를 밀어 '리뷰 고/치기'로 끊기지 않게 세 단추를 나눠 가짐 */
 }
 @keyframes tipUp { from { translate: 0 100%; } }
-@media (max-width: 720px) and (prefers-reduced-motion: reduce) { .tip[open] { animation-name: joinFade; } }   /* 동작 줄이기: 올라오지 않고 페이드로 */
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) { .tip[open], .tip.rw[open] { animation-name: joinFade; } }   /* 동작 줄이기: 올라오지 않고 페이드로 */
 @media (max-width: 420px) {   
     /* 메뉴 5개(코브 몰·내 오피스)가 한 줄에 들어가게 */
     .nav { padding: 0 12px; }
@@ -1303,6 +1394,10 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
     .kr-label p { font-size: 12.5px; }
     .kr.cut .kr-label { padding: calc(16px * var(--z)) calc(11px * var(--z)) calc(12px * var(--z)); }   /* 진열대 카드는 .kr.cut 규칙이 이겨서 크기(--z)를 곱한 값으로 다시 */
     .kr.cut .kr-label h4 { font-size: max(11px, calc(18.5px * var(--z))); }
+    .pd-gosi-list { grid-template-columns: minmax(0, 1fr); }   /* 이름 위 · 값 아래 */
+    .rw-rate { flex-wrap: wrap; row-gap: 4px; }   /* 만족도: 이름은 위, 별 · 점수는 아래 (44px 별 5개 + 이름이 한 줄에 안 들어감) */
+    .rw-rate .rw-label { width: 100%; }
+    .pd-gosi-list dt { padding-bottom: 0; border-bottom: 0; }
     .kr-stamp { width: calc(38px * var(--z, 1)); height: calc(38px * var(--z, 1)); font-size: max(8px, calc(10.5px * var(--z, 1))); }
 }
 @media (max-width: 380px) {   
@@ -1310,6 +1405,7 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
     .nav nav { font-size: 18px; }
     .bag-hud { gap: 5px; padding: 4px 7px 4px 9px; font-size: 15px; }   /* 9,999 세 개여도 제목을 가리지 않게 */
     .kr-board { column-gap: 14px; padding-left: 12px; padding-right: 12px; }   /* 진열대 옆 간격만 예전 값 → 이름표의 하트 수와 '하트 선물'이 한 줄에 들어감 */
+    .rw-stars { gap: 2px; }   /* 320px에서도 별 5개 + 점수가 한 줄 */
     .mall-search-go { padding: 0 14px; font-size: 18px; }   /* 검색어 칸이 너무 좁아지지 않게 */
 }
 @media (max-width: 360px) {
@@ -1325,6 +1421,10 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
     .pd .pd-x { margin-bottom: -56px; }   /* 닫기 ✕가 커진 만큼 아래 내용과 겹치는 거리도 */
     .mall-sort button, .sw, .mall-cart, .mall-have, .kr-none-hint, .kr-none-all { min-height: 44px; }
     .mall-search-x { width: 44px; height: 44px; }
+    .pd-rv-write, .pd-share { min-height: 44px; }
+    .rw-chip span { min-height: 44px; padding-top: 12px; }
+    .rw-stars { gap: 4px; }
+    .rw-star span[aria-hidden] { width: 44px; height: 44px; }
 }
 
 

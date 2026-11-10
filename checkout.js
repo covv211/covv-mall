@@ -16,6 +16,7 @@ const W=window.covvWallet, A=window.covvArt, R=window.covvRules;
 if(!W||!A||!R) return;
 const CART_KEY='covv-cart-v1';     // 장바구니 [{id, qty}] — 이 브라우저에만
 const ORDER_KEY='covv-order-v1';   // 지금 주문서에 올린 것 {mode:'now'|'cart', items} — 이 탭에만(sessionStorage), 새로고침해도 즉시구매 주문서가 비지 않게
+const REVIEW_KEY='covv-reviews-v1';   // 내가 쓴 리뷰 {상품 id: {star, sku, size, quality, text, day, photos}} — 이 브라우저에만, 상품마다 하나 (문을 열면 서버 리뷰로)
 const SELL=A.PRODUCTS.filter(p=>p.img&&p.price>0);   // 진열대에서 살 수 있는 상품 = 사진 상품 (한정판 무지개는 아직)
 // 실제로 주문하는 단위 = 상품마다 고르는 색상 · 캐릭터 종류(covvArt.OPTIONS). 종류가 없거나 첫 줄이 빠져도 진열대 상품 자체는 늘 하나로 들어가게
 const SKUS=[];
@@ -32,6 +33,7 @@ const byId=id=>SKUS.find(k=>k.id===id)||null;
 const won=n=>n.toLocaleString('ko-KR')+'원';
 const el=(tag,cls,text)=>{ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; };
 const toast=t=>{ if(window.covvToast) window.covvToast(t); };
+const liftToast=()=>{ if(window.covvToast&&window.covvToast.lift) window.covvToast.lift(); };   // 떠 있는 알림을 방금 연 창 안으로 (mall.js)
 const noProto=(k,v)=>k==='__proto__'?undefined:v;
 
 /* ══════════ 장바구니 ══════════ */
@@ -104,6 +106,19 @@ function paintOpts(k){
   $d('.pd-opts').hidden=os.length<2;
   optBox.querySelectorAll('[data-pd-opt]').forEach(b=>{ b.setAttribute('aria-pressed',String(b.dataset.pdOpt===k.id)); });
 }
+// 상품 정보 제공 고시 (전자상거래법 — 판매 전에 꼭): [mall.js INFO의 칸, 표 이름] — 값은 종류 id가 상품 id보다 먼저, 비면 GOSI_EMPTY (지어 넣지 않음)
+const GOSI=[['material','소재'],['size','크기'],['maker','제조자 · 수입자'],['origin','제조국'],['care','취급 시 주의사항'],['warranty','품질보증기준'],['as','A/S 책임자 · 전화번호'],['kc','KC 인증 · 사용 연령']];
+const GOSI_EMPTY='판매를 시작할 때 적어요';
+function paintGosi(p){
+  const box=$d('#pdGosi'); if(!box) return;
+  const I=A.INFO||{}, info=Object.assign({},I[p.base],I[p.id]), val=k=>typeof info[k]==='string'&&info[k].trim()?info[k].trim():'';
+  const rows=[['상품 코드',p.base],['품명',(SELL.find(x=>x.id===p.base)||p).name],...GOSI.map(([k,t])=>[t,val(k)]),['판매자','']];
+  box.textContent='';
+  rows.forEach(([t,v])=>{ const dd=el('dd',v?null:'empty',v||(t==='판매자'?`${GOSI_EMPTY} · 코브 몰 맨 아래 가게 정보에도 함께`:GOSI_EMPTY)); box.append(el('dt',null,t),dd); });   // 값은 글자로만 (textContent)
+  const size=val('size'), mat=val('material'), line=$d('[data-pd-size]');
+  line.textContent=size?`크기 ${size}${mat?' · '+mat:''}`:''; line.hidden=!size;
+  $d('[data-pd-size-todo]').hidden=!!size;
+}
 // 큰 사진 아래: 사진 몇 장 · 상품 소개 (mall.js PRODUCTS의 shots · story, 종류마다 따로 줘도 됨). 아직 없으면 빈 사진 자리 · 짧은 소개(desc) + 채울 곳 안내
 const SHOT_HOLES=3;   // 사진이 없을 때 보여 줄 빈 사진 자리 수
 function paintMore(p){
@@ -135,6 +150,43 @@ const REVIEW_SAMPLES=[
   {who:'예시 9',  star:4, text:'배송은 하루 늦었지만 키링이 예뻐서 괜찮아요.'},
   {who:'예시 10', star:5, text:'책상에 걸어 두고 볼 때마다 기분이 좋아져요.'},
 ];
+/* 내가 쓴 리뷰 (리뷰 쓰기 창 — 아래 '리뷰 쓰기') */
+const RW_MIN=10, RW_MAX=500;          // 리뷰 글자 수 (한두 마디만 남지 않게 · 이 브라우저 저장소가 넘치지 않게)
+const RW_PHOTOS=3;                    // 리뷰 사진 장수 (멘케트는 10장 — 사진을 이 브라우저 저장소(5MB 안팎)에 두므로 상품마다 3장)
+const RW_PX=480, RW_Q=.72;            // 사진을 긴 변 480px · JPEG 품질 0.72로 줄여 저장 (한 장 30KB 안팎)
+const RW_FILE_MAX=25e6;               // 이보다 큰 파일은 읽지 않음 (휴대폰이 멈추지 않게)
+const RW_PHOTO_LEN=200000;            // 사진 한 장 data URL 최대 글자 수 (RW_PX · RW_Q로 줄인 사진은 크롬에서 잡음 사진도 17만 자 안팎) — 줄일 때 · 불러올 때 같은 한도
+const RW_STORE_MAX=1.5e6;             // 리뷰 전체 저장 글자 수 — 넘으면 사진을 빼고 저장 (같은 저장소(5MB 안팎)를 쓰는 가방 · 장바구니 자리를 남김)
+const RW_KEEP=60;                     // 저장소에서 읽는 리뷰 수 상한 (변조로 수천 개를 넣어도 멈추지 않게)
+const RW_SIZE=[['small','작아요'],['fit','딱 좋아요'],['large','커요']];                                   // 멘케트 '착용감' 자리 → 키링 크기
+const RW_QUALITY=[['great','아주 좋아요'],['good','좋아요'],['okay','보통이에요'],['poor','아쉬워요']];
+const RW_PHOTO_RE=/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/;   // 저장소에서 읽은 사진은 이 브라우저가 만든 JPEG 모양만
+const rwLabel=(list,v,pre)=>{ const f=list.find(x=>x[0]===v); return f?pre+f[1]:''; };
+// 저장소는 손님이 바꿀 수 있으니 아는 상품 · 알맞은 모양만 (별 1~5 · 글 RW_MIN~RW_MAX자 · 사진은 JPEG data URL만)
+function cleanReviews(v){
+  const out={};
+  if(!v||typeof v!=='object'||Array.isArray(v)) return out;
+  for(const id of Object.keys(v).slice(0,RW_KEEP)){
+    const r=v[id];
+    if(!SELL.some(p=>p.id===id)||!r||typeof r!=='object') continue;
+    const star=typeof r.star==='number'&&r.star>=1&&r.star<=5?Math.round(r.star):0, text=typeof r.text==='string'?r.text.trim().slice(0,RW_MAX):'';
+    if(!star||text.length<RW_MIN) continue;
+    const k=typeof r.sku==='string'?byId(r.sku):null;
+    out[id]={star, sku:k&&k.base===id?k.id:id, size:RW_SIZE.some(x=>x[0]===r.size)?r.size:'', quality:RW_QUALITY.some(x=>x[0]===r.quality)?r.quality:'', text,
+      day:typeof r.day==='string'&&/^\d{4}-\d{1,2}-\d{1,2}$/.test(r.day)?r.day:'', photos:Array.isArray(r.photos)?r.photos.filter(d=>typeof d==='string'&&d.length<RW_PHOTO_LEN&&RW_PHOTO_RE.test(d)).slice(0,RW_PHOTOS):[]};
+  }
+  return out;
+}
+let reviews={};
+const loadReviews=()=>{ try{ reviews=cleanReviews(JSON.parse(localStorage.getItem(REVIEW_KEY)||'{}',noProto)); }catch(e){ reviews={}; } };
+loadReviews();
+function saveReviews(){   // → 저장했으면 true (리뷰 전체가 RW_STORE_MAX를 넘거나 저장소가 가득 차면 false)
+  try{
+    if(!Object.keys(reviews).length){ localStorage.removeItem(REVIEW_KEY); return true; }
+    const s=JSON.stringify(reviews); if(s.length>RW_STORE_MAX) return false;
+    localStorage.setItem(REVIEW_KEY,s); return true;
+  }catch(e){ return false; }
+}
 const RV_SPEED=1500;   // 한 장이 넘어가는 시간(ms) = Swiper speed (style.css 전환 시간도 이 값 — --rv-speed로 넘김, 끌다 놓을 때 · ‹ › 도 같음)
 const RV_MS=2000;      // 다 넘어간 뒤 다음 장까지 쉬는 시간(ms) = Swiper autoplay delay → 한 장에 3.5초
 const RV_SWIPE=40;     // 이만큼(px) 끌거나 밀면 넘김, 덜 끌면 제자리로
@@ -165,12 +217,20 @@ function rvGo(i){
 const rvStep=d=>{ if(!rvDrag&&performance.now()-rvAt>=RV_SPEED) rvGo(rvI+d); };   // ‹ › · 트랙패드: 넘어가는 중(1.5초) · 끄는 중엔 무시 = Swiper loop의 loopPreventsSliding (연달아 누르면 복사 카드 밖이 비어 보이던 것 막음)
 function paintReviews(){   // 상품을 열 때마다 첫 카드부터 (지금은 예시뿐이라 상품마다 같음 → 실제 리뷰가 생기면 그 상품 것만)
   if(!rvTrack) return;
-  const list=REVIEW_SAMPLES, dots=$d('[data-rv-dots]');
+  const p=byId(pdId), mine=p&&reviews[p.base];
+  const list=mine?[{...mine,mine:true},...REVIEW_SAMPLES]:REVIEW_SAMPLES, dots=$d('[data-rv-dots]');   // 내가 쓴 리뷰(이 브라우저에만)는 맨 앞
   const card=(r,clone)=>{
     const n=Math.max(1,Math.min(5,Math.round(r.star)||5)), li=el('li',clone?'pd-rv-card clone':'pd-rv-card'), s=el('span','pd-rv-stars','★'.repeat(n)+'☆'.repeat(5-n)), who=el('p','pd-rv-who');
     s.setAttribute('role','img'); s.setAttribute('aria-label',`별 5개 중 ${n}개`);
-    who.append(el('span',null,r.who),el('span','pd-rv-tag','예시'));
-    li.append(s,el('p','pd-rv-text',r.text),who);
+    who.append(el('span',null,r.mine?'내 리뷰':r.who),el('span','pd-rv-tag',r.mine?'이 브라우저에만':'예시'));
+    li.append(s,el('p','pd-rv-text',r.text));   // 손님이 쓴 글 → textContent (el)
+    if(r.mine){
+      li.classList.add('mine');
+      const k=byId(r.sku), meta=[k&&k.id!==p.base?k.name:'',rwLabel(RW_SIZE,r.size,'크기 '),rwLabel(RW_QUALITY,r.quality,'품질 ')].filter(Boolean).join(' · ');
+      if(meta) li.append(el('p','pd-rv-meta',meta));
+      if(r.photos.length){ const ps=el('div','pd-rv-pics'); r.photos.forEach((d,i)=>{ const im=el('img'); im.src=d; im.alt=`내 리뷰 사진 ${i+1}`; im.width=im.height=44; ps.append(im); }); li.append(ps); }
+    }
+    li.append(who);
     if(clone) li.setAttribute('aria-hidden','true');   // 화면낭독기엔 진짜 카드만
     return li;
   };
@@ -178,7 +238,7 @@ function paintReviews(){   // 상품을 열 때마다 첫 카드부터 (지금�
   list.forEach((r,j)=>{ const c=card(r); if(!j) c.classList.add('on'); rvTrack.append(c); dots.append(el('span',j?null:'on')); });   // 첫 카드 · 점은 처음부터 켬 → 동작 줄이기에서 창을 열 때 빈 칸에서 페이드로 시작하지 않음
   if(rvH){ rvTrack.prepend(...list.slice(-rvH).map(r=>card(r,true))); list.slice(0,rvH).forEach(r=>rvTrack.append(card(r,true))); }   // 앞엔 끝 카드들, 뒤엔 처음 카드들 (Swiper loop처럼 양 끝이 이어짐)
   rvTrack.style.setProperty('--h',rvH);
-  $d('[data-rv-count]').textContent=rvN?`${rvN}개 · 예시`:'';   // 실제 리뷰 수처럼 보이지 않게
+  $d('[data-rv-count]').textContent=!rvN?'':mine?`내 리뷰 1 · 예시 ${rvN-1}`:`${rvN}개 · 예시`;   // 실제 리뷰 수처럼 보이지 않게
   $d('.pd-rv-ctrl').hidden=dots.hidden=rvN<2; rvBox.hidden=!rvN; $d('[data-rv-empty]').hidden=rvN>0;
   rvHover=rvKey=false; rvDrag=null; rvAt=0; rvTrack.classList.remove('drag'); rvJump(0,true); rvGo(0);
 }
@@ -244,7 +304,8 @@ function fillPd(p){
   $d('#pdPrice').textContent=p.price.toLocaleString('ko-KR');
   paintOpts(p);
   paintMore(p);
-  $d('[data-pd-added]').hidden=true; $d('[data-pd-live]').textContent='';
+  paintGosi(p);
+  $d('[data-pd-added]').hidden=true; $d('[data-pd-live]').textContent=''; $d('[data-pd-share-box]').hidden=true;
   paintPd();
 }
 function openProduct(id){
@@ -256,7 +317,9 @@ function openProduct(id){
   $d('#pdCoupon').textContent=n?`금화 쿠폰 ${n}장 있음 · 키링 1개당 ${R.COUPON_WON}원 할인`:`금화 ${R.COUPON_COINS}개를 모으면 키링 1개 ${R.COUPON_WON}원 할인`;
   $d('#pdShip').textContent=`${won(R.SHIP_FEE)} · 상품 ${won(R.SHIP_FREE)} 이상이면 무료`;
   if(!dlg.showModal){ goCheckout('now',[{id,qty:1}]); return; }   // <dialog>를 모르는 옛 브라우저(iOS 15.3 이하) → 창 대신 바로 주문서로 (살 길이 막히지 않게)
+  const g=$d('.pd-gosi'); if(g) g.open=false;   // 다른 상품을 열면 고시 표는 접힌 채로 (종류만 바꿀 땐 그대로 — fillPd)
   if(!dlg.open) dlg.showModal();
+  liftToast();   // 창을 열기 직전에 뜬 알림(장바구니에서 빠진 상품 등)이 창 뒤에 가려지지 않게
   dlg.scrollTop=0; $d('.pd-info').scrollTop=0; if(optBox) optBox.scrollLeft=0;   // 다른 상품을 열면 맨 위(큰 사진)부터 · 휴대폰 종류 띠도 처음부터
   paintReviews();   // 창이 열린 뒤 (열려 있어야 자동 넘김이 켜짐)
   $d('[data-pd-buy]').focus({preventScroll:true});   // 그냥 focus()면 짧은 창 · 휴대폰에서 버튼 쪽으로 다시 스크롤돼 위의 되감기가 풀림
@@ -274,6 +337,8 @@ if(dlg){
   dlg.addEventListener('click',e=>{
     if((e.target===dlg&&pdDownOut)||e.target.closest('[data-pd-close]')){ closePd(); return; }   // 바깥(배경)이나 ✕를 누르면 닫힘
     const tp=e.target.closest('[data-tip]'); if(tp){ openTip(tp.dataset.tip); return; }   // 혜택 줄의 ⓘ → 안내 창
+    if(e.target.closest('[data-pd-share]')){ sharePd(); return; }   // 가격 옆 🔗 공유
+    if(e.target.closest('[data-rv-write]')){ openWrite(); return; }   // 리뷰 '리뷰 쓰기'
     const o=e.target.closest('[data-pd-opt]');
     if(o){ const p=byId(o.dataset.pdOpt); if(p&&p.id!==pdId){ fillPd(p); const img=$d('#pdImg'); img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap'); } return; }   // 종류가 바뀐 걸 알게 사진이 살짝 톡
     const rv=e.target.closest('[data-rv]'); if(rv){ rvStep(Number(rv.dataset.rv)); return; }   // 리뷰 ‹ ›
@@ -294,8 +359,8 @@ if(dlg){
   // 안내 창이 떠 있으면 그 창만 닫음 · 회원가입 창처럼 먼저 Esc를 받아 닫은 창이 있으면(defaultPrevented) 상품 창은 그대로
   addEventListener('keydown',e=>{
     if(e.key!=='Escape'||e.isComposing||e.defaultPrevented) return;
-    const t=tips.find(x=>x.open);
-    if(t){ e.preventDefault(); t.close(); return; }
+    const t=tips.filter(x=>x.open).pop();   // 맨 위(나중에 연) 창 — 리뷰 쓰기 위에 리뷰 운영 안내가 겹쳐 열릴 수 있음
+    if(t){ e.preventDefault(); if(t===rwDlg){ rwEscAt=performance.now(); rwTryClose(); } else t.close(); return; }
     if(dlg.open){ e.preventDefault(); closePd(); }
   });
 }
@@ -323,15 +388,185 @@ function paintTip(t){
 function openTip(id){
   const t=document.getElementById(id);
   if(!t||!t.showModal||t.open) return;
-  paintTip(t); t.showModal();
+  paintTip(t); t.showModal(); liftToast();
   t.querySelector('.tip-body').scrollTop=0;
 }
 tips.forEach(t=>{
   t.addEventListener('pointerdown',e=>{ tipDownOut=e.target===t; });   // 창 안 글자를 끌다 배경에서 놓아도 닫히지 않게 (상품 창과 같음)
   t.addEventListener('click',e=>{
-    if((e.target===t&&tipDownOut)||e.target.closest('[data-tip-close]')){ t.close(); return; }   // 바깥(배경) · ✕ · 닫기 · 확인
+    if((e.target===t&&tipDownOut&&t!==rwDlg)||e.target.closest('[data-tip-close]')){ if(t===rwDlg) rwTryClose(); else t.close(); return; }   // 바깥(배경) · ✕ · 닫기 · 확인 — 리뷰 쓰기는 바깥을 눌러도 안 닫힘(쓰던 글이 날아가지 않게)
     if(e.target.closest('[data-tip-join]')){ t.close(); if(window.covvJoin) window.covvJoin(); }   // 안내 창을 닫고 회원가입(또는 로그인) 창 — 상품 창은 뒤에 그대로
   });
+});
+
+/* ── 키링 주소 · 공유: covv.html?k=상품id#mall → 그 키링 창이 바로 열림 ──
+   틱톡 · 레드노트 소개 글이나 친구에게 키링 하나를 바로 보여 주려고. 휴대폰은 기기 공유 창, 그 밖엔 링크 복사 (카카오 SDK 같은 외부 스크립트 없음 — CSP 그대로)
+   k는 진열대 상품 id와 똑같을 때만 조회 키로 쓰고 화면에 넣지 않음 · 연 뒤엔 주소에서 지움(새로고침 · 뒤로 가기에 같은 창이 또 뜨지 않게, history.state는 그대로 — screens.js 방문 기록) */
+const shareUrl=id=>location.origin+location.pathname+'?k='+encodeURIComponent(id)+'#mall';
+(()=>{
+  let k=''; try{ k=new URLSearchParams(location.search).get('k')||''; }catch(e){}
+  if(!k) return;
+  const drop=()=>{ try{ const u=new URL(location.href); u.searchParams.delete('k'); history.replaceState(history.state,'',u.pathname+u.search+u.hash); }catch(e){} };
+  const p=SELL.find(x=>x.id===k);
+  if(!p||location.hash!=='#mall'){ drop(); return; }   // 모르는 상품 · #mall 없는 주소(?k=tiger#about 등)는 열지 않음
+  const on=e=>{ if(e.detail!=='mall') return; removeEventListener('covv-screen',on); drop(); setTimeout(()=>openProduct(p.id),0); };   // 코브 몰 화면이 열린 뒤 (screens.js가 #mall을 열며 보냄) — 같은 이벤트의 '화면이 바뀌면 상품 창 닫기'(아래)가 먼저 끝나게 한 박자 뒤
+  addEventListener('covv-screen',on);
+})();
+async function sharePd(){
+  const p=byId(pdId); if(!p) return;
+  const base=SELL.find(x=>x.id===p.base)||p, url=shareUrl(base.id), box=$d('[data-pd-share-box]');
+  if(navigator.share&&matchMedia('(pointer: coarse)').matches){
+    try{ await navigator.share({title:`${base.name} · 코브 몰`,text:'들판에서 놀고, 키링으로 데려가요',url}); return; }
+    catch(e){ if(e&&e.name==='AbortError') return; }   // 손님이 공유 창을 닫음 → 아무것도 안 함 (다른 실패면 아래 복사로)
+  }
+  try{
+    await navigator.clipboard.writeText(url);
+    toast('🔗 링크를 복사했어요 · 열면 이 키링 창이 바로 떠요'); box.hidden=true; return;
+  }catch(e){}
+  $d('#pdShareHelp').textContent=matchMedia('(pointer: coarse)').matches?'길게 눌러 복사하세요':'⌘C (Ctrl+C)로 복사하세요';
+  const inp=box.querySelector('input'); inp.value=url; box.hidden=false; inp.focus(); inp.select();   // 복사가 막힌 브라우저(http로 연 와이파이 미리보기 등) → 직접 복사
+}
+
+/* ── 리뷰 쓰기 (멘케트 상품 상세 리뷰 쓰기 창, covv.html #rwDlg) ──
+   열 때마다 그 상품의 내 리뷰로 채움(없으면 별 5 · 딱 좋아요 · 아주 좋아요 · 빈 글) → 등록하면 이 브라우저에만 저장하고 리뷰 카드 맨 앞에 '내 리뷰'로
+   사진은 고르는 즉시 이 브라우저 안에서 줄여 data URL로 (CSP가 blob: 그림을 막음) — 어디에도 보내지 않음
+   rwSess = 창을 연 회차: 크롬은 dialog close 이벤트를 다음 프레임에 보내고 사진 줄이기는 몇 초 걸림 → 지난 회차의 늦은 일이 새로 연 창을 건드리지 않게 (사진 1장이 보였는데 0장으로 저장되던 것) */
+const rwDlg=document.getElementById('rwDlg'), rwForm=document.getElementById('rwForm');
+const $w=s=>rwDlg.querySelector(s);
+let rwPhotos=[], rwBusy=false, rwDelArmed=false, rwCloseArmed='', rwSess=0, rwStart='', rwEscAt=0, rvStale=false;   // rwCloseArmed = 닫기 경고를 띄운 때의 내용(rwState)
+if(rwDlg&&rwForm){
+  // 고른 별 · 칩과 포커스 표시는 input 바로 뒤 span에 (:has()를 모르는 브라우저에서도 보이게) — 코드 상수만 innerHTML
+  $w('[data-rw-stars]').innerHTML=[1,2,3,4,5].map(n=>`<label class="rw-star"><input class="sr-only" type="radio" name="star" value="${n}"><span aria-hidden="true">★</span><span class="sr-only">${n}점</span></label>`).join('');
+  [['size',RW_SIZE],['quality',RW_QUALITY]].forEach(([nm,list])=>{ $w(`[data-rw-chips="${nm}"]`).innerHTML=list.map(([v,t])=>`<label class="rw-chip"><input class="sr-only" type="radio" name="${nm}" value="${v}"><span>${t}</span></label>`).join(''); });
+  $w('#rwText').maxLength=RW_MAX;
+}
+const rwState=()=>JSON.stringify([...new FormData(rwForm)].concat([['photos',rwPhotos.map(d=>d.length).join(',')]]));   // 지금 쓴 내용 (열 때와 다르면 닫기 전에 한 번 더 확인)
+function paintStars(){ const v=Number((rwForm.querySelector('[name="star"]:checked')||{}).value)||0; rwForm.querySelectorAll('.rw-star').forEach((l,i)=>{ l.classList.toggle('on',i<v); }); $w('[data-rw-score]').textContent=`${v} / 5`; }
+function paintCount(){ $w('#rwCount').textContent=`${$w('#rwText').value.length} / ${RW_MAX}`; }
+function paintPhotos(){
+  const ul=$w('#rwPics'); ul.textContent='';
+  rwPhotos.forEach((d,i)=>{ const li=el('li'), im=el('img'), x=el('button',null,'✕'); im.src=d; im.alt=`올린 사진 ${i+1}`; x.type='button'; x.dataset.rwOut=i; x.setAttribute('aria-label',`사진 ${i+1} 빼기`); li.append(im,x); ul.append(li); });
+  ul.hidden=!rwPhotos.length;
+  const full=rwPhotos.length>=RW_PHOTOS;
+  const f=$w('#rwFile');
+  if(full&&document.activeElement===f) ($w('#rwPics li:last-child [data-rw-out]')||$w('#rwText')).focus();   // 포커스가 있던 칸이 꺼지면 문서로 빠짐 → 마지막 사진 ✕로
+  f.disabled=full; f.setAttribute('aria-disabled',String(full||rwBusy)); $w('.rw-add').classList.toggle('full',full||rwBusy);
+  $w('[data-rw-n]').textContent=`${rwPhotos.length} / ${RW_PHOTOS}`;
+  $w('[data-rw-hint]').textContent=rwBusy?'사진을 줄이는 중이에요…':`사진은 ${RW_PHOTOS}장까지 올릴 수 있어요`;
+  $w('[data-rw-submit]').disabled=rwBusy;   // 줄이는 중에 등록하면 아직 안 끝난 사진이 빠짐
+}
+const setRadio=(nm,v)=>{ const r=rwForm.querySelector(`[name="${nm}"][value="${v}"]`); if(r) r.checked=true; };
+function openWrite(){
+  const p=byId(pdId);
+  if(!p||!rwDlg||!rwDlg.showModal||rwDlg.open) return;
+  rwSess++;
+  const mine=reviews[p.base], img=$w('#rwImg');
+  img.src=p.img; img.alt=''; $w('.rw-thumb').style.background=p.paper;
+  $w('#rwName').textContent=p.name;
+  $w('#rwSub').textContent=mine&&mine.day?`${mine.day.replace(/^(\d+)-(\d+)-(\d+)$/,'$1년 $2월 $3일')}에 쓴 리뷰 · 이 브라우저에만 있어요`:'아직 판매 전이라 미리 써 보는 리뷰예요';
+  rwForm.reset();
+  const sel=$w('#rwSku'); sel.textContent='';
+  SKUS.filter(k=>k.base===p.base).forEach(k=>{ const o=el('option',null,k.name); o.value=k.id; sel.append(o); });
+  sel.value=mine?mine.sku:p.id; sel.disabled=sel.options.length<2;   // 종류가 하나뿐이면 고를 것이 없음
+  setRadio('star',mine?mine.star:5); setRadio('size',mine&&mine.size||'fit'); setRadio('quality',mine&&mine.quality||'great');   // 처음 값은 멘케트 시안처럼 '딱 맞아요 · 아주 좋아요' 자리
+  $w('#rwText').value=mine?mine.text:'';
+  rwPhotos=mine?mine.photos.slice():[]; rwBusy=false; rwDelArmed=false; rwCloseArmed='';
+  $w('#rwErr').textContent='';
+  $w('[data-rw-submit]').textContent=mine?'리뷰 고치기':'리뷰 등록';
+  const del=$w('[data-rw-del]'); del.hidden=!mine; del.textContent='지우기';
+  paintStars(); paintCount(); paintPhotos();
+  rwStart=rwState();
+  rwDlg.showModal(); rwForm.scrollTop=0; liftToast();
+}
+// 닫기(✕ · 취소 · Esc · 안드로이드 뒤로 가기): 쓰던 내용이 열 때와 다르면 한 번 더 눌러야 닫힘 (바깥 누르기로는 아예 안 닫힘)
+function rwTryClose(){
+  const now=rwState();
+  if(now!==rwStart&&now!==rwCloseArmed){ rwCloseArmed=now; $w('#rwErr').textContent='쓰던 리뷰가 있어요 · 한 번 더 누르면 저장하지 않고 닫아요'; return; }   // 경고 뒤에 또 고쳤으면 다시 경고
+  rwDlg.close();
+}
+// 사진 한 장 → 긴 변 RW_PX의 JPEG data URL, 못 읽거나 RW_PHOTO_LEN을 넘으면 null (이 브라우저 안에서만 — 어디에도 보내지 않음)
+function shrinkPhoto(file){
+  return new Promise(res=>{
+    if(!file||!/^image\//.test(file.type)||file.size>RW_FILE_MAX) return res(null);
+    const rd=new FileReader();
+    rd.onerror=()=>res(null);
+    rd.onload=()=>{
+      const im=new Image();
+      im.onerror=()=>res(null);
+      im.onload=()=>{
+        try{
+          const k=Math.min(1,RW_PX/Math.max(im.naturalWidth,im.naturalHeight,1)), c=document.createElement('canvas');
+          c.width=Math.max(1,Math.round(im.naturalWidth*k)); c.height=Math.max(1,Math.round(im.naturalHeight*k));
+          const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height); g.drawImage(im,0,0,c.width,c.height);   // 투명 PNG도 흰 바탕 JPEG로
+          let d=c.toDataURL('image/jpeg',RW_Q); if(d.length>=RW_PHOTO_LEN) d=c.toDataURL('image/jpeg',RW_Q*.6);   // 잡음 많은 사진은 품질을 낮춰 한 번 더
+          res(d.length<RW_PHOTO_LEN&&RW_PHOTO_RE.test(d)?d:null);
+        }catch(e){ res(null); }
+      };
+      im.src=rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+}
+if(rwDlg&&rwForm){
+  rwForm.addEventListener('change',e=>{ if(e.target.name==='star') paintStars(); });
+  $w('#rwText').addEventListener('input',()=>{ paintCount(); if($w('#rwText').value.trim().length>=RW_MIN) $w('#rwErr').textContent=''; });
+  $w('#rwFile').addEventListener('change',async e=>{
+    const inp=e.target, files=[...inp.files], s=rwSess, room=RW_PHOTOS-rwPhotos.length; inp.value='';   // 같은 사진을 다시 골라도 change가 오게
+    if(rwBusy){ $w('#rwErr').textContent='사진을 줄이는 중이에요 · 끝난 뒤에 더 올려 주세요'; return; }
+    if(!files.length||room<1) return;
+    rwBusy=true; paintPhotos();
+    let bad=0;
+    for(const f of files.slice(0,room)){
+      const d=await shrinkPhoto(f);
+      if(s!==rwSess||!rwDlg.open) return;   // 기다리는 동안 창을 닫거나 다시 열었음 → 이 회차 일은 버림 (새 창은 openWrite가 이미 처음부터)
+      if(!d) bad++; else if(rwPhotos.length<RW_PHOTOS) rwPhotos.push(d);
+      paintPhotos();   // 한 장씩 바로 보이게
+    }
+    rwBusy=false; paintPhotos();
+    $w('#rwErr').textContent=files.length>room?`사진은 ${RW_PHOTOS}장까지라 앞의 ${room}장만 올렸어요`:bad?'열 수 없거나 너무 큰 사진은 빼고 올렸어요':'';
+  });
+  rwDlg.addEventListener('click',e=>{
+    const tp=e.target.closest('[data-tip]'); if(tp){ openTip(tp.dataset.tip); return; }   // '리뷰 운영 안내 보기' → 이 창 위에 겹쳐 엶
+    const out=e.target.closest('[data-rw-out]');
+    if(out){ rwPhotos.splice(Number(out.dataset.rwOut),1); paintPhotos(); const f=$w('#rwFile'); (f.disabled?($w('[data-rw-out]')||$w('#rwText')):f).focus(); return; }   // 누른 ✕는 사라짐 → 사진 올리기 칸으로 (꺼져 있으면 남은 사진 · 글 칸으로)
+    if(e.target.closest('[data-rw-del]')){   // 두 번 눌러야 지움 (실수로 한 번 눌러 쓴 리뷰가 사라지지 않게)
+      const b=e.target.closest('[data-rw-del]');
+      if(!rwDelArmed){ rwDelArmed=true; b.textContent='한 번 더'; $w('#rwErr').textContent='지우기를 한 번 더 누르면 내 리뷰가 지워져요'; return; }
+      const p=byId(pdId); if(!p) return;
+      delete reviews[p.base]; saveReviews(); rwDlg.close(); paintReviews(); toast('🗑️ 내 리뷰를 지웠어요');
+    }
+  });
+  rwDlg.addEventListener('cancel',e=>{ e.preventDefault(); if(performance.now()-rwEscAt>200) rwTryClose(); });   // 안드로이드 뒤로 가기 몸짓 (Esc는 아래 keydown이 먼저 받음 — 한 번 누름에 두 번 세지 않게)
+  rwDlg.addEventListener('close',()=>{
+    if(rwDlg.open) return;   // 늦게 온 지난 회차의 close
+    rwDelArmed=false; rwCloseArmed='';
+    if(rvStale&&dlg&&dlg.open){ rvStale=false; paintReviews(); }   // 쓰는 동안 다른 탭에서 리뷰가 바뀌었음
+  });
+  rwForm.addEventListener('submit',e=>{
+    e.preventDefault();
+    const p=byId(pdId); if(!p) return;
+    if(rwBusy){ $w('#rwErr').textContent='사진을 줄이는 중이에요 · 잠시 뒤에 눌러 주세요'; return; }
+    const text=$w('#rwText').value.trim();
+    if(text.length<RW_MIN){ $w('#rwErr').textContent=`리뷰는 ${RW_MIN}자 이상 적어 주세요 (지금 ${text.length}자)`; $w('#rwText').focus(); return; }
+    const pick=nm=>(rwForm.querySelector(`[name="${nm}"]:checked`)||{}).value||'', k=byId($w('#rwSku').value);
+    const had=reviews[p.base], rec={star:Math.max(1,Math.min(5,Number(pick('star'))||5)), sku:k&&k.base===p.base?k.id:p.base, size:pick('size'), quality:pick('quality'), text:text.slice(0,RW_MAX), day:W.today(), photos:rwPhotos.slice(0,RW_PHOTOS)};
+    reviews[p.base]=rec;
+    let msg=had?'📝 리뷰를 고쳤어요 · 이 브라우저에만 저장돼요':'📝 리뷰를 남겼어요 · 이 브라우저에만 저장돼요';
+    if(!saveReviews()){   // 저장 칸이 모자람 → 사진 빼고 한 번 더
+      rec.photos=[];
+      if(!saveReviews()){ if(had) reviews[p.base]=had; else delete reviews[p.base]; $w('#rwErr').textContent='이 브라우저 저장소가 가득 차서 저장하지 못했어요'; return; }
+      msg='📝 저장 칸이 모자라 사진은 빼고 리뷰만 남겼어요';
+    }
+    if(!had) W.log(`📝 ${(SELL.find(x=>x.id===p.base)||p).name}에 리뷰를 남겼어요`);
+    rwDlg.close(); paintReviews(); toast(msg);
+  });
+}
+// 다른 탭에서 리뷰를 쓰거나 지우면 여기도 (리뷰 쓰기 창이 열려 있으면 닫힐 때 다시 그림)
+addEventListener('storage',e=>{
+  if(e.key!==REVIEW_KEY&&e.key!==null) return;
+  loadReviews();
+  if(rwDlg&&rwDlg.open) rvStale=true;
+  else if(dlg&&dlg.open) paintReviews();
 });
 
 // 코브 몰: 오린 사진 · '자세히 · 구매' → 상품 창, '🛒 장바구니' → 주문서 (상품 창 안의 '장바구니 보기'도)
@@ -390,6 +625,7 @@ root.innerHTML=`
       </dl>
       <p class="fine" data-co-ship-note></p>
       <label class="co-check co-agree"><input type="checkbox" id="coAgree"> 주문 내용을 확인했고 결제에 동의해요</label>
+      <p class="fine co-minor">만 19세 미만이 법정대리인(부모님 등)의 동의 없이 한 주문은 본인이나 법정대리인이 취소할 수 있어요</p>
       <button type="button" class="co-pay-btn" data-co-pay>결제하기</button>
       <p class="co-err" data-co-err role="alert"></p>
       <p class="co-note" data-co-note role="status"></p>
@@ -479,7 +715,7 @@ if(root){
 }
 
 addEventListener('covv-screen',e=>{
-  isOpen=e.detail==='checkout'; closePd(); if(isOpen) paint();   // 뒤로·앞으로로 화면이 바뀌어도 상품 창은 닫음
+  isOpen=e.detail==='checkout'; tips.forEach(t=>{ if(t.open) t.close(); }); closePd(); if(isOpen) paint();   // 뒤로·앞으로로 화면이 바뀌어도 상품 창과 그 위 안내 · 리뷰 쓰기 창은 닫음
   if(goneN&&!goneTold&&(e.detail==='mall'||isOpen)){ goneTold=true; toast(`🧺 진열대에서 내려간 상품 ${goneN}개는 장바구니에서 뺐어요`); }
 });
 // 휴대폰(한 줄 배치)에서 최종 결제 금액 칸이 화면에 보이면 아래 띠를 숨김 — 같은 금액이 두 번 보이지 않게 (넓은 화면은 style.css가 띠를 늘 숨김)

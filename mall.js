@@ -36,6 +36,7 @@ const PW_EASY=new Set(['12345678','123456789','1234567890','87654321','password'
 const NEW_DAYS=14;                        // 진열대에 올린 날(day)부터 이만큼 'NEW' 도장 · NEW 정렬 맨 앞 (tag:'NEW'를 손으로 붙이면 한 달 지나도 신상처럼 보임)
 const SHOW_STATS=false;                   // sold·reviews가 진짜 숫자가 되면 true → '리뷰 많은'·'판매량' 정렬을 공개 화면에도 (지금은 예시 숫자라 미리보기에서만)
 const TOAST_MS=[2800,8000], TOAST_CH=90;  // 알림이 떠 있는 시간(ms) 최소 · 최대, 한 글자당 더하는 시간 — 긴 안내를 천천히 읽는 손님도 놓치지 않게
+const TOAST_MOVE_MS=60;                    // 알림 칸을 다른 창으로 옮긴 뒤 글자를 넣기까지(ms) — 화면낭독기가 새 칸을 알아챈 다음에 읽게
 const Q_MAX=40;                           // 진열대 검색어 최대 글자 수
 const Q_NAV=88;                           // 위 고정 메뉴가 가리는 높이(px) — style.css .screen scroll-padding-top과 같은 값
 const Q_HOLD=['찾는 키링이 있나요? 이름 · 동물 · 색으로 찾아보세요','키링 이름 · 동물 · 색'];   // 검색창 안내 글: 넓은 화면 · 휴대폰(720px 이하 — 긴 글은 잘려 보임)
@@ -338,11 +339,20 @@ try{
 /* ── 알림 (화면 아래 잠깐 떴다 사라짐) ── */
 const toastEl=document.getElementById('covvToast');
 let toastT=null;
+// 모달 창(상품 창 · 안내 창 · 회원가입 창 — showModal)은 맨 위 층(top layer)에 올라가 z-index와 상관없이 알림을 덮고, 창 밖은 화면낭독기도 못 읽음
+// → 열린 모달 중 맨 위 것(나중에 연 창이 문서에서도 뒤에 있음) 안으로 옮겨서 띄우고, 그 창이 닫히면 다음 창이나 제자리로
+const toastHome=toastEl&&toastEl.parentNode;
+const toastHost=()=>{ const ds=[...document.querySelectorAll('dialog[open]')].filter(d=>{ try{ return d.matches(':modal'); }catch(e){ return true; } }); return ds.length?ds[ds.length-1]:toastHome; };
+if(toastEl) document.addEventListener('close',e=>{ if(e.target.contains&&e.target.contains(toastEl)){ const h=toastHost(); if(h&&h!==e.target) h.appendChild(toastEl); } },true);   // close는 버블링하지 않아서 캡처로 받음
 function toast(msg){
   if(!toastEl) return;
-  toastEl.textContent=msg; toastEl.classList.add('show');
-  clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),Math.min(TOAST_MS[1],Math.max(TOAST_MS[0],String(msg).length*TOAST_CH)));
+  const h=toastHost(), moved=!!h&&toastEl.parentNode!==h;
+  const show=()=>{ toastEl.textContent=msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),Math.min(TOAST_MS[1],Math.max(TOAST_MS[0],String(msg).length*TOAST_CH))); };
+  if(!moved){ show(); return; }
+  toastEl.classList.remove('show'); toastEl.textContent=''; h.appendChild(toastEl);
+  setTimeout(show,TOAST_MOVE_MS);   // 옮긴 알림 칸(role=status)은 화면낭독기가 새 칸으로 봐서, 글자가 든 채 옮기면 안 읽음 → 빈 칸을 옮긴 뒤 글자
 }
+toast.lift=()=>{ if(!toastEl||!toastEl.classList.contains('show')) return; const h=toastHost(); if(h&&toastEl.parentNode!==h) h.appendChild(toastEl); };   // 떠 있는 알림을 방금 연 모달 안으로 (checkout.js가 창을 연 뒤 부름)
 
 /* 첫 방문 선물: 게임을 안 해도 하트·별을 바로 눌러 볼 수 있게 */
 if(!raw.gift){
@@ -582,7 +592,11 @@ const BAG=[
 ];
 
 // 내 오피스(myoffice.js)에서도 같은 그림·상품 목록을 씀
-window.covvArt={coveSVG,PRODUCTS,OPTIONS,RETIRED,VOTES,BAG,GEM_EARLY,DAY_HEART,DAY_STAR,DECO_CANDY,tornClip,PREVIEW};   // tornClip: 상품 창·주문서 썸네일의 찢은 색종이도 같은 모양, PREVIEW: 사진 없는 예시 종류는 미리보기에서만 (checkout.js)
+// 상품 정보 제공 고시 (전자상거래법 — 판매 전에 꼭): 상품 id(또는 종류 id) → {material, size, maker, origin, care, warranty, as, kc} 글자. 빈 칸은 상품 창 표에 '판매를 시작할 때 적어요'
+// ✏️ 키링마다 직접 채우세요 — 크기는 고리 포함 · 제외를 같이(예: '본체 5.2 × 6 cm · 고리 포함 9 cm'), 제조자 · 제조국 · A/S 전화번호는 주인님만 아는 값이라 지어 넣지 않음
+//    어린이용으로 팔면 품목이 '어린이제품'이 되어 KC 인증 · 사용 연령을 kc에 (아니면 패션잡화 기준)
+const INFO={};
+window.covvArt={coveSVG,PRODUCTS,OPTIONS,RETIRED,VOTES,BAG,GEM_EARLY,DAY_HEART,DAY_STAR,DECO_CANDY,tornClip,PREVIEW,INFO};   // tornClip: 상품 창·주문서 썸네일의 찢은 색종이도 같은 모양, PREVIEW: 사진 없는 예시 종류는 미리보기에서만 (checkout.js)
 
 const root=document.getElementById('mallRoot');
 if(!root) return;
@@ -625,7 +639,7 @@ const FAQ=[
   ['하트 선물은 뭐예요?', `<p>마음에 드는 키링을 응원하는 표시예요. 한 키링에 하루 ${DAY_HEART}개까지 줄 수 있고, 응원한 키링은 내 오피스에 모여요. 하트가 떨어지면 들판에서 더 주워 오면 돼요.</p>`],
   ['별 · 사탕은 어디에 써요?', `<p>별은 '다음 키링 투표'에서 만들었으면 하는 후보에 걸어요(한 후보에 하루 ${DAY_STAR}개). 사탕 ${DECO_CANDY}개로는 들판을 걷는 내 코브의 색을 바꿀 수 있어요.</p>`],
   ['금화가 사라졌어요 · 다른 기기에서 안 보여요', `<p>가방은 이 브라우저에만 저장돼요. 인터넷 사용 기록을 지우거나 사생활 보호(시크릿) 창을 쓰면 사라지고, 다른 기기 · 브라우저에서는 보이지 않아요. 사파리는 7일 넘게 들르지 않으면 지워질 수도 있어요. 사라진 금화는 복구해 드릴 수 없어요.</p>`],
-  ['배송 · 교환 · 반품은요?', `<p>판매를 시작할 때 배송 기간 · 택배사 · 교환 · 반품 방법을 여기와 상품 창에 적어 둘게요. 지금 보이는 배송비(${won(R.SHIP_FEE)}, ${won(R.SHIP_FREE)} 이상 무료)는 예시예요.</p>`],
+  ['배송 · 교환 · 반품은요?', `<p>판매를 시작할 때 배송 기간 · 택배사 · 교환 · 반품 방법을 여기와 상품 창에 적어 둘게요. 지금 보이는 배송비(${won(R.SHIP_FEE)}, ${won(R.SHIP_FREE)} 이상 무료)는 예시예요.</p><p>반품은 판매를 시작하면 전자상거래법대로 받은 날부터 7일 안에 할 수 있어요. 설명과 다르거나 잘못 왔으면 받은 날부터 3개월, 그 사실을 안 날부터 30일 안에 반품할 수 있고 반품 배송비는 코브 몰이 내요. 교환 방법은 판매를 시작할 때 적어요.</p>`, 'ship'],
   ['회원가입하면 뭐가 달라요?', `<p>지금 계정은 이 브라우저에만 만들어져요. 로그아웃하면 이 브라우저에서 내 오피스(미니홈피)를 가려 둘 수 있고, 로그인 중엔 들판의 내 코브 이름표에 닉네임이 보여요. 이름 · 연락처 같은 개인정보는 받지 않아요.</p>`],
 ];
 
@@ -645,6 +659,7 @@ root.innerHTML=`
     <button type="button" class="mall-cart" data-cart>🛒 장바구니 <b data-cart-n>0</b></button>
   </div>
   <p class="mall-soon">🚧 오픈 준비 중이에요 · 가격과 리뷰는 예시이고, 지금은 구경 · 장바구니 · 하트 · 투표만 돼요</p>
+  <p class="fine mall-shipnote">카드의 가격은 키링 값이에요 · 배송비 ${won(R.SHIP_FEE)} 별도, ${won(R.SHIP_FREE)} 이상 무료 (예시) <button type="button" class="join-link" data-faq-go="ship">배송 · 반품 안내</button></p>
 
   <section class="mall-block" aria-label="키링 진열대">
     <div class="kr-board">
@@ -825,8 +840,9 @@ root.addEventListener('click',e=>{
     if(window.covvCloseScreen) window.covvCloseScreen();
     return;
   }
-  if(e.target.closest('[data-faq]')){   // 위 줄 '🎒 하트 · 별 · 금화' → 자주 묻는 질문 '어디서 얻어요?'를 열고 그 자리로
-    const d=root.querySelector('[data-faq-get]'); if(!d) return;
+  const fq=e.target.closest('[data-faq],[data-faq-go]');
+  if(fq){   // 위 줄 '🎒 하트 · 별 · 금화' → '어디서 얻어요?', 배송비 줄 '배송 · 반품 안내' → '배송 · 교환 · 반품은요?' — 그 질문을 열고 그 자리로
+    const d=root.querySelector(`[data-faq-${fq.dataset.faqGo==='ship'?'ship':'get'}]`); if(!d) return;
     d.open=true; d.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
     d.querySelector('summary').focus({preventScroll:true});
     return;

@@ -540,7 +540,7 @@ if(loginDlg){
   closable(loginDlg);
 }
 function closable(d){
-  d.addEventListener('click',e=>{ if(e.target===d||e.target.closest('[data-join-close]')) d.close(); });   // 바깥(배경)이나 ✕를 누르면 닫힘
+  d.addEventListener('click',e=>{ if(e.target.closest('[data-join-close]')) d.close(); });   // ✕를 눌러야만 닫힘 — 바깥(배경 · 뒤의 들판)을 눌러도 안 닫힘 (주인님 11-10: 쓰던 아이디 · 비밀번호가 실수로 날아가지 않게)
   // Esc는 창만 닫음 (screens.js가 뒤에 열린 화면까지 닫지 않게 기본 동작을 막고 직접 닫음)
   d.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!e.isComposing){ e.preventDefault(); d.close(); } });
 }

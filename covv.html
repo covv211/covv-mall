@@ -27,8 +27,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Hahmlet:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
     <!-- 외부 파일의 integrity = 원본 파일의 지문. 누가 CDN 파일을 바꿔치기하면 지문이 달라져서 브라우저가 실행하지 않음 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" integrity="sha384-uR1wgObmx89ZQ4VVXHdzjbDJZ1PvBK01K+E3GebmaBKdZ87qRJvBWPoPbzWeEd5T" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="stylesheet" href="default.css?v=1110e">
-    <link rel="stylesheet" href="style.css?v=1110e">
+    <link rel="stylesheet" href="default.css?v=1110m">
+    <link rel="stylesheet" href="style.css?v=1110m">
 </head>
 <body>
 
@@ -369,13 +369,25 @@
                         <div class="pd-story-text" id="pdStory"></div>
                         <p class="fine todo" data-pd-story-todo>지금은 짧은 소개만 있어요 (✏️ mall.js PRODUCTS의 story에 소개 글을 직접 수정하세요)</p>
                     </section>
+                    <!-- 상품 정보 제공 고시 (전자상거래법 — 판매 전에 꼭): 접어 둔 표, 값은 mall.js INFO · 빈 칸은 '판매를 시작할 때 적어요' (checkout.js가 채움) -->
+                    <details class="pd-gosi">
+                        <summary>상품 정보 제공 고시</summary>
+                        <dl class="pd-gosi-list" id="pdGosi"></dl>
+                        <p class="fine">빈 칸은 판매 전이라 아직 정하지 않은 것이에요 · 사진은 화면에 따라 실제 색과 조금 달라 보일 수 있어요</p>
+                        <p class="fine todo">(✏️ mall.js INFO에 키링마다 직접 채우세요 — 제조자 · 제조국 · A/S 전화번호는 주인님만 아는 값)</p>
+                    </details>
                 </div>
             </div>
             <div class="pd-info">
                 <p class="eyebrow">COVV MALL</p>
                 <h2 id="pdName"></h2>
                 <p class="pd-desc" id="pdDesc"></p>
-                <p class="pd-price"><b id="pdPrice"></b>원 <span class="pd-soon">오픈 준비 중 · 예시 가격</span></p>
+                <!-- 크기 · 소재 한 줄 (mall.js INFO에 있을 때만 — 사진만으로는 키링 크기를 알기 어려움) -->
+                <p class="pd-size" data-pd-size hidden></p>
+                <p class="fine todo" data-pd-size-todo>크기 · 소재가 아직 비어 있어요 (✏️ mall.js INFO의 size · material을 직접 넣으세요)</p>
+                <!-- 가격 + 🔗 공유: 이 키링만 여는 주소(covv.html?k=상품id#mall)를 휴대폰은 공유 창으로, 그 밖엔 복사 (checkout.js) — 복사가 안 되는 브라우저는 아래 칸에서 직접 -->
+                <div class="pd-price-row"><p class="pd-price"><b id="pdPrice"></b>원 <span class="pd-soon">오픈 준비 중 · 예시 가격</span></p><button type="button" class="pd-share" data-pd-share aria-label="이 키링 링크 공유하기"><span aria-hidden="true">🔗</span> 공유</button></div>
+                <p class="pd-share-box" data-pd-share-box hidden><input type="text" readonly aria-label="이 키링 링크" aria-describedby="pdShareHelp"><span id="pdShareHelp"></span></p>
                 <!-- 혜택 줄: ⓘ를 누르면 그 안내 창이 상품 창 위에 뜸 (아래 dialog.tip — 멘케트 상품 상세의 신규 가입 혜택 · 카드 혜택 · 배송 정보 창, checkout.js) -->
                 <ul class="pd-meta">
                     <li><span>할인</span><b id="pdCoupon"></b></li>
@@ -397,7 +409,8 @@
                 <!-- 리뷰: 한 장씩 1.5초 동안 넘어가고 2초 쉬는 카드 (Swiper speed 1500처럼) — 끌어서 · ‹ › 로도 넘기고, 마우스를 올리거나 ⏸를 누르면 멈춤 (카드는 checkout.js가 채움. ✏️ 지금은 카드마다 '예시' 표시가 붙은 예시 10개 → 문을 열면 산 분이 쓴 실제 리뷰로) -->
                 <section class="pd-review" aria-labelledby="pdReviewTitle">
                     <div class="pd-rv-head">
-                        <h3 id="pdReviewTitle">리뷰 <span class="pd-rv-count" data-rv-count></span></h3>
+                        <div class="pd-rv-title"><h3 id="pdReviewTitle">리뷰 <span class="pd-rv-count" data-rv-count></span></h3><button class="pd-tip" type="button" data-tip="tipReview" aria-haspopup="dialog" aria-label="리뷰 운영 안내">i</button></div>
+                        <button class="pd-rv-write" type="button" data-rv-write aria-haspopup="dialog">리뷰 쓰기</button>
                         <div class="pd-rv-ctrl"><button class="pd-rv-btn" type="button" data-rv="-1" aria-label="이전 리뷰">‹</button><button class="pd-rv-btn pd-rv-play" type="button" data-rv-play aria-pressed="false" aria-label="리뷰 자동 넘김 멈춤"></button><button class="pd-rv-btn" type="button" data-rv="1" aria-label="다음 리뷰">›</button></div>
                     </div>
                     <div class="pd-rv"><ul class="pd-rv-track" id="pdReviews"></ul></div>
@@ -486,14 +499,91 @@
                     <div><dt>출고 · 도착</dt><dd>판매를 시작할 때 택배사와 함께 적어요</dd></div>
                 </dl>
             </section>
+            <!-- 교환 · 반품: 반품 기간 · 비용 · 환불 날짜는 전자상거래법 제17조 · 제18조 그대로 (지어낸 약속 아님) — 법은 반품(청약철회)만 정하고 교환은 정하지 않아서 교환은 따로 -->
             <section class="tip-sec" aria-labelledby="tipShipBack">
                 <h3 id="tipShipBack">교환 · 반품</h3>
+                <p class="tip-sub">반품은 판매를 시작하면 전자상거래법이 정한 대로 해요 · 교환 방법은 판매를 시작할 때 적어요</p>
                 <dl class="tip-terms">
-                    <div><dt>기간 · 배송비</dt><dd>판매를 시작할 때 적어요</dd></div>
-                    <div><dt>문의</dt><dd>문의 창구는 준비 중이에요</dd></div>
+                    <div><dt>마음이 바뀌면</dt><dd>판매를 시작하면 받은 날부터 7일 안에 반품할 수 있어요 · 이때 반품 배송비는 판매를 시작할 때 적어요</dd></div>
+                    <div><dt>설명과 다르면</dt><dd>받은 날부터 3개월, 그 사실을 안 날부터 30일 안에 반품할 수 있고 반품 배송비는 코브 몰이 내요</dd></div>
+                    <div><dt>환불</dt><dd>돌려받은 키링이 도착한 날부터 3영업일 안에 돌려드려요</dd></div>
+                    <div><dt>문의</dt><dd>문의 창구는 준비 중이에요 · 도움이 필요하면 1372 소비자상담센터</dd></div>
                 </dl>
             </section>
-            <p class="fine todo">✏️ 택배사 · 출고 기간 · 추가 배송비 · 교환/반품 기간과 배송비가 정해지면 직접 채우세요 (배송비 숫자는 checkout-rules.js의 SHIP_FEE · SHIP_FREE)</p>
+            <p class="fine todo">✏️ 택배사 · 출고 기간 · 추가 배송비 · 단순 변심 반품 배송비 · 주문 제작이라 반품이 안 되는 상품이 정해지면 직접 채우세요 (배송비 숫자는 checkout-rules.js의 SHIP_FEE · SHIP_FREE)</p>
+        </div>
+        <div class="tip-actions"><button type="button" class="tip-btn" data-tip-close>확인</button></div>
+    </dialog>
+
+    <!-- 리뷰 쓰기: 멘케트 상품 상세의 리뷰 쓰기 창(상품 줄 → 만족도 별 → 아이템 · 착용감 · 품질 → 글 · 글자 수 → 사진 → 취소 · 리뷰 등록)을 코브 몰 모양으로 — 상품 창 리뷰의 '리뷰 쓰기'로 엶
+         사이즈 대신 그 키링의 종류, 착용감 대신 크기. 아래에서 0.3초 일정한 빠르기로 올라옴(멘케트와 같음), 바깥을 눌러도 닫히지 않음(쓰던 글이 날아가지 않게)
+         문을 열기 전이라 리뷰 · 사진은 이 브라우저에만 저장하고 어디에도 보내지 않음 — 상품마다 하나, 다시 쓰면 고침, 내 리뷰는 나에게만 리뷰 카드 맨 앞에 보임 (별 · 칩 · 종류 · 내용은 checkout.js가 채움) -->
+    <dialog class="tip rw" id="rwDlg" aria-labelledby="rwTitle">
+        <div class="tip-head"><h2 id="rwTitle">리뷰 쓰기</h2><button class="join-x" type="button" data-tip-close aria-label="리뷰 쓰기 닫기">✕</button></div>
+        <form class="tip-body" id="rwForm" novalidate>
+            <div class="rw-product">
+                <span class="rw-thumb"><img id="rwImg" alt="" width="300" height="300"></span>
+                <div><p class="rw-name" id="rwName"></p><p class="rw-sub" id="rwSub"></p></div>
+            </div>
+            <div class="rw-field rw-rate" role="radiogroup" aria-labelledby="rwStarLabel">
+                <span class="rw-label" id="rwStarLabel">만족도</span>
+                <div class="rw-stars" data-rw-stars></div>
+                <span class="rw-score" data-rw-score aria-hidden="true"></span>
+            </div>
+            <div class="rw-field"><label class="rw-label" for="rwSku">종류</label><select class="rw-select" id="rwSku" name="sku"></select></div>
+            <div class="rw-field" role="radiogroup" aria-labelledby="rwSizeLabel"><span class="rw-label" id="rwSizeLabel">크기</span><div class="rw-chips" data-rw-chips="size"></div></div>
+            <div class="rw-field" role="radiogroup" aria-labelledby="rwQualityLabel"><span class="rw-label" id="rwQualityLabel">품질</span><div class="rw-chips" data-rw-chips="quality"></div></div>
+            <div class="rw-text">
+                <textarea id="rwText" name="text" aria-label="리뷰 글" aria-describedby="rwCount rwErr" placeholder="첫 문장이 리뷰 카드에 그대로 실려요. 달아 본 느낌부터 적어 주세요.&#10;색감 · 크기 · 고리가 튼튼한지 적어 주시면 다른 분들께 큰 도움이 돼요."></textarea>
+                <span class="rw-count" id="rwCount"></span>
+            </div>
+            <div class="rw-photo">
+                <label class="rw-add"><input class="sr-only" type="file" id="rwFile" accept="image/*" multiple><span class="rw-add-box"><span aria-hidden="true">＋</span><span class="rw-add-n" data-rw-n></span></span><span class="sr-only">사진 올리기</span></label>
+                <ul class="rw-pics" id="rwPics" aria-label="올린 사진"></ul>
+                <p class="rw-hint" data-rw-hint></p>
+            </div>
+            <section class="tip-notice" aria-labelledby="rwNotice">
+                <h3 id="rwNotice">꼭 확인해 주세요</h3>
+                <ul>
+                    <li>아직 문을 열기 전이라 리뷰는 이 브라우저에만 저장돼요. 다른 손님에게는 보이지 않아요.</li>
+                    <li>사진도 이 브라우저 안에서 작게 줄여 두기만 하고 어디에도 보내지 않아요.</li>
+                    <li>한 상품에 리뷰는 하나예요. 다시 쓰면 고쳐져요.</li>
+                </ul>
+                <button type="button" class="join-link" data-tip="tipReview" aria-haspopup="dialog">리뷰 운영 안내 보기</button>
+            </section>
+        </form>
+        <!-- 오류 · 닫기 확인 · 지우기 확인: 스크롤되는 글 칸 밖, 단추 줄 바로 위 (아래쪽에 있으면 스크롤에 가려 첫 누름이 반응 없는 것처럼 보임) -->
+        <p class="rw-err" id="rwErr" role="alert"></p>
+        <div class="tip-actions">
+            <button type="button" class="tip-btn ghost danger" data-rw-del hidden>지우기</button>
+            <button type="button" class="tip-btn ghost" data-tip-close>취소</button>
+            <button type="submit" class="tip-btn" form="rwForm" data-rw-submit>리뷰 등록</button>
+        </div>
+    </dialog>
+
+    <!-- 리뷰 운영 안내: 리뷰 머리 ⓘ · 리뷰 쓰기 창 '꼭 확인해 주세요'에서 엶 — 누가 쓰나 · 어디에 얼마나 · 별점이 어디에 쓰이나 · 지우기 (전자상거래법 리뷰 운영 기준 공개 4가지 자리)
+         지금 코드가 실제로 하는 일만 적음 (리뷰는 이 브라우저에만 · 별점은 정렬 · 할인에 안 쓰임 — checkout.js 리뷰 쓰기) · 리뷰 쓰기 창 위에 겹쳐 열릴 수 있어서 문서에서 그 뒤에 둠(맨 위 창 = 마지막) -->
+    <dialog class="tip" id="tipReview" aria-labelledby="tipReviewTitle">
+        <div class="tip-head"><h2 id="tipReviewTitle">리뷰 운영 안내</h2><button class="join-x" type="button" data-tip-close aria-label="리뷰 운영 안내 닫기">✕</button></div>
+        <div class="tip-body">
+            <div class="tip-hero">
+                <p class="tip-title">내 리뷰 말고는 모두 코브 몰이 만든 <strong>예시</strong>예요</p>
+                <p class="tip-sub">산 분이 쓴 리뷰가 아니라 리뷰 칸 모양을 보여 드리려는 예시라서 카드마다 '예시' 표시가 붙어 있어요</p>
+            </div>
+            <section class="tip-sec" aria-labelledby="tipReviewNow">
+                <h3 id="tipReviewNow">지금 (문을 열기 전)</h3>
+                <dl class="tip-terms">
+                    <div><dt>누가 쓰나요</dt><dd>누구나 '리뷰 쓰기'로 써 볼 수 있어요 · 키링마다 하나</dd></div>
+                    <div><dt>어디에 · 얼마나</dt><dd>이 브라우저에만 저장되고 나에게만 보여요 · 어디에도 보내지 않아요</dd></div>
+                    <div><dt>별점은</dt><dd>내 만족도 표시예요 · 정렬 · 할인 · 혜택에는 쓰이지 않아요</dd></div>
+                    <div><dt>지우기</dt><dd>내 리뷰는 '지우기'로 지울 수 있어요 · 사이트 기록(쿠키)을 지우거나(사파리는 7일 넘게 안 들르면), 그 키링이 진열대에서 내려가면 함께 사라져요 · 코브 몰은 볼 수 없어요</dd></div>
+                </dl>
+            </section>
+            <section class="tip-sec" aria-labelledby="tipReviewLater">
+                <h3 id="tipReviewLater">판매를 시작하면</h3>
+                <p class="tip-sub">구매한 분만 쓸 수 있게 할지, 리뷰를 얼마나 걸어 두는지, 별점이 어디에 쓰이는지, 지우는 기준과 이의 제기 방법을 문을 열기 전에 여기에 적어요.</p>
+            </section>
+            <p class="fine todo">✏️ 판매를 시작하기 전에 리뷰 운영 기준 4가지(작성 권한 · 게시 기간 · 별점 기준과 효과 · 삭제 기준과 이의 제기 절차 — 전자상거래법)를 실제 정책으로 직접 수정하세요</p>
         </div>
         <div class="tip-actions"><button type="button" class="tip-btn" data-tip-close>확인</button></div>
     </dialog>
@@ -563,13 +653,13 @@
 
     <!-- ?v=날짜 : 파일을 고치면 숫자를 바꿔야 방문자 브라우저가 옛 파일(캐시) 대신 새 파일을 받음 (style.css·screens.js 안 office.js도 같이) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js" integrity="sha512-334uBDwY0iZ2TklV1OtDtBW9vp7jjP7SWRzT7Ehu1fdtPIjTpCwTSFb8HI/YBau9L1/kRBEOALrS229Kry4yFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="checkout-rules.js?v=1110e"></script>
-    <script src="mall.js?v=1110e"></script>
-    <script src="checkout.js?v=1110e"></script>
-    <script src="hero.js?v=1110e"></script>
-    <script src="field.js?v=1110e"></script>
-    <script src="myoffice.js?v=1110e"></script>
-    <script src="screens.js?v=1110e"></script>
-    <script src="visitors.js?v=1110e"></script>
+    <script src="checkout-rules.js?v=1110m"></script>
+    <script src="mall.js?v=1110m"></script>
+    <script src="checkout.js?v=1110m"></script>
+    <script src="hero.js?v=1110m"></script>
+    <script src="field.js?v=1110m"></script>
+    <script src="myoffice.js?v=1110m"></script>
+    <script src="screens.js?v=1110m"></script>
+    <script src="visitors.js?v=1110m"></script>
 </body>
 </html>
