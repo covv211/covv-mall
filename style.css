@@ -798,7 +798,7 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
 .pd-more { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 4px 10px 40px; }   /* 큰 사진 아래: 사진 몇 장 · 상품 소개 */
 .pd-more > * { width: 100%; }   /* 사진 · 소개는 칸 폭 가득 → 양옆 여백은 .pd-more 패딩(10px) 하나로 정함 */
 .pd-shots { display: flex; flex-direction: column; gap: 16px; }
-.pd-shots[hidden], .pd-story[hidden], .pd-more[hidden] { display: none; }   /* 사진 · 소개 글이 없으면 숨김 (checkout.js — 빈 자리는 미리보기에서만) */
+.pd-shots[hidden], .pd-story[hidden], .pd-more[hidden] { display: none; }   /* 사진 자리 · 소개 칸은 늘 보임 (checkout.js) — 숨김 규칙은 짝으로 남겨 둠 */
 .pd-shot { margin: 0; border-radius: 18px; background: var(--card); box-shadow: 0 1px 0 rgba(91, 53, 36, .12), 0 12px 28px rgba(91, 53, 36, .12); overflow: hidden; }
 .pd-shot img { display: block; width: 100%; height: auto; }
 .pd-shot.hole { display: grid; place-items: center; aspect-ratio: 4 / 3; border: 1.5px dashed rgba(91, 53, 36, .3); background: rgba(255, 255, 255, .35); box-shadow: none; color: rgba(91, 53, 36, .55); font-size: 15px; font-weight: 700; }   /* 사진이 아직 없을 때 빈 자리 */

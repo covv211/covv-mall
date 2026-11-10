@@ -112,14 +112,12 @@ function paintMore(p){
   box.textContent='';
   shots.forEach((s,i)=>{ const f=el('figure','pd-shot'), im=el('img'); im.src=s; im.alt=`${p.name} 사진 ${i+2}`; im.loading='lazy'; im.decoding='async'; im.width=im.height=560; f.append(im); box.append(f); });
   // ↑ width·height = 불러오기 전에도 네모 자리를 잡아 둠(아래 소개가 덜 밀림), 불러오면 사진 비율대로
-  if(!shots.length&&A.PREVIEW) for(let i=0;i<SHOT_HOLES;i++){ const h=el('div','pd-shot hole','사진 자리'); h.setAttribute('aria-hidden','true'); box.append(h); }   // 빈 사진 자리는 미리보기에서만 (공개 화면에선 만들다 만 것처럼 보임)
+  if(!shots.length) for(let i=0;i<SHOT_HOLES;i++){ const h=el('div','pd-shot hole','사진 자리'); h.setAttribute('aria-hidden','true'); box.append(h); }   // 빈 사진 자리는 공개 화면에도 (주인님 11-10: 큰 사진 아래로 내려 보는 자리가 있게 · ✏️ 안내만 미리보기에서)
   box.hidden=!box.childElementCount;
   $d('[data-pd-shots-todo]').hidden=shots.length>0;
   st.textContent='';
   String(p.story||p.desc||'').split('\n').map(t=>t.trim()).filter(Boolean).forEach(t=>st.append(el('p',null,t)));   // 줄바꿈 = 문단
   $d('[data-pd-story-todo]').hidden=!!p.story;
-  $d('.pd-story').hidden=!p.story&&!A.PREVIEW;   // 소개 글이 없으면 이름 밑 한 줄(desc)과 똑같은 글을 두 번 보여 주지 않음
-  $d('.pd-more').hidden=box.hidden&&$d('.pd-story').hidden;
 }
 /* ── 리뷰 (고르기 · 구매 칸 맨 밑): 한 장씩 넘어가는 카드 (Swiper speed 1500 · autoplay delay 2000과 같게) ── */
 // 끌기(마우스 · 손가락) · 트랙패드로 옆으로 밀기 · ‹ › 로도 넘김. 마우스를 올려 둔 동안 · 키보드로 버튼에 온 동안 · ⏸ · 안 보일 때(창 닫힘 · 칸 밖 · 탭 숨김)는 멈춤

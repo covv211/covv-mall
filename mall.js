@@ -47,7 +47,7 @@ const Q_SAME=[
   ['초록','녹색'],['파랑','파란','블루'],['보라','퍼플'],['금빛','금색','골드'],['은빛','실버'],
   ['고양이','냥이'],['곰','쿠마','곰돌이'],['강아지','멍멍이','댕댕이'],['자동차','차량'],   // '블랙캣'은 넣지 않음: 고양이 묶음에 있으면 '블랙'에 키보드 키링(고양이 키캡)이 걸림
 ];
-// 주인님 미리보기(내 컴퓨터 · 같은 와이파이로 연 휴대폰) — ✏️ 채울 곳 안내 · 빈 사진 자리 · 사진 없는 예시 종류는 여기서만 보이고 공개 사이트에선 숨김
+// 주인님 미리보기(내 컴퓨터 · 같은 와이파이로 연 휴대폰) — ✏️ 채울 곳 안내 · 사진 없는 예시 종류는 여기서만 보이고 공개 사이트에선 숨김
 const PREVIEW=/^(localhost|127\.0\.0\.1|\[::1\])$|^(10|192\.168|172\.(1[6-9]|2\d|3[01]))\.|\.(local|localhost|test)$/.test(location.hostname);   // 사설 IP = 휴대폰으로 연 미리보기 (visitors.js도 같은 규칙 — 바꾸면 같이)
 if(PREVIEW) document.documentElement.classList.add('preview');
 
@@ -582,7 +582,7 @@ const BAG=[
 ];
 
 // 내 오피스(myoffice.js)에서도 같은 그림·상품 목록을 씀
-window.covvArt={coveSVG,PRODUCTS,OPTIONS,RETIRED,VOTES,BAG,GEM_EARLY,DAY_HEART,DAY_STAR,DECO_CANDY,tornClip,PREVIEW};   // tornClip: 상품 창·주문서 썸네일의 찢은 색종이도 같은 모양, PREVIEW: 사진 없는 예시 종류 · 빈 사진 자리는 미리보기에서만 (checkout.js)
+window.covvArt={coveSVG,PRODUCTS,OPTIONS,RETIRED,VOTES,BAG,GEM_EARLY,DAY_HEART,DAY_STAR,DECO_CANDY,tornClip,PREVIEW};   // tornClip: 상품 창·주문서 썸네일의 찢은 색종이도 같은 모양, PREVIEW: 사진 없는 예시 종류는 미리보기에서만 (checkout.js)
 
 const root=document.getElementById('mallRoot');
 if(!root) return;
