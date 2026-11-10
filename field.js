@@ -17,7 +17,7 @@
    - 주인공 이름표는 '🐾 코브' → 코브 몰 계정에 로그인 중이면 내 닉네임 (mall.js covvWallet.coveName)
    - 발열 대책: 외부 모델 0개(전부 코드로 생성), 풀·꽃은 인스턴싱 한 번에 그림, 후처리 없음,
      움직이지 않는 소품은 합쳐서 그림, 그림자는 한 번만 계산, 픽셀비율·프레임 상한, 다른 화면이 열리면 렌더 정지
-   - 자동 화질: 느린 컴퓨터(내장 그래픽 · 학원 PC 등)에서 움직일 때 꾸준히 느리면 해상도 → 풀 · 꽃 수 순서로 한 단계씩 낮춤 (주소에 ?fps를 붙이면 왼쪽 아래에 fps · 단계)
+   - 자동 화질: 느린 컴퓨터(내장 그래픽 · 학원 PC 등)에서 움직일 때 꾸준히 느리면 풀 · 꽃 수를 한 단계씩 줄임(선명도는 그대로) (주소에 ?fps를 붙이면 왼쪽 아래에 fps · 단계)
    ══════════════════════════════════════════════════════════ */
 (function(){
 'use strict';
@@ -36,23 +36,28 @@ const IDLE_FPS=30, IDLE_MS=20000;   // 누르기 · 움직이기 · 키 입력�
 const GRASS_COUNT=IS_TOUCH?15000:36000;
 const FLOWER_COUNT=IS_TOUCH?350:800;
 const SHADOW_SIZE=IS_TOUCH?1024:2048;
-/* 자동 화질 (아래 '자동 화질' 구역): 단계마다 dpr = 화면 배율 상한, grass · flower = 그릴 비율 — 0이 가장 좋음 */
+/* 자동 화질 (아래 '자동 화질' 구역): 단계마다 grass · flower = 그릴 비율 — 0이 가장 좋음
+   선명도(해상도)는 어느 단계에서도 낮추지 않고 풀 · 꽃만 줄임 (주인님 11-10: 해상도를 낮췄더니 학원 PC에서 '전보다 흐릿' → '선명도는 올리고 풀은 줄인 상태로') */
 const QUALITY=[
-  {dpr:MAX_DPR, grass:1,   flower:1},
-  {dpr:1,       grass:1,   flower:1},    // 고해상도 화면(배율 1.25 · 1.5)이면 이것만으로도 그릴 점이 절반 안팎
-  {dpr:1,       grass:.6,  flower:.6},
-  {dpr:.85,     grass:.45, flower:.5},
-  {dpr:.7,      grass:.3,  flower:.4},   // 가장 낮게 — 조금 흐릿해도 움직임이 끊기지 않는 쪽
+  {grass:1,   flower:1},
+  {grass:.6,  flower:.6},
+  {grass:.45, flower:.5},
+  {grass:.3,  flower:.4},
+  {grass:.2,  flower:.3},
 ];
-const Q_KEY='covv-field-q';        // 이 브라우저에서 고른 화질 단계 (다음 방문은 처음부터 그 단계)
+const Q_KEY='covv-field-q2';       // 이 브라우저에서 고른 화질 단계 (다음 방문은 처음부터 그 단계) — q2: 단계 순서를 바꿔서 예전 기억('covv-field-q')은 안 씀
 const Q_WARM=4000;                 // 시작하고 이만큼(ms)은 재지 않음 — 셰이더 · 그림 준비로 원래 끊김
 const Q_SLOW=1.35;                 // 평균 프레임 간격이 목표(1000/FPS)의 이 배를 넘으면 느림 (60fps 목표면 22ms ≈ 45fps 아래)
 const Q_HOLD=2000;                 // 이만큼(ms) 꾸준히 느리면 한 단계 내림 · 내린 뒤에도 이만큼 기다렸다 다시 잼
 const Q_GAP=250;                   // 이보다 긴 프레임 틈은 탭 전환 · 멈춤이라 세지 않음
+const Q_FAST=1.08;                 // 평균 간격이 목표의 이 배 아래면 넉넉함 (60fps 목표면 18ms ≈ 55fps 위)
+const Q_UP=8000;                   // 이만큼(ms) 넉넉하면 한 단계 올려 봄 — 올린 단계가 다시 느리면 내리고, 이번 방문에선 그 단계로 다시 안 올림
 let qLv=0;
 try{ qLv=Math.min(QUALITY.length-1,Math.max(0,parseInt(localStorage.getItem(Q_KEY),10)||0)); }catch(e){}
-try{ const f=new URLSearchParams(location.search).get('q'); if(f!==null&&/^[0-4]$/.test(f)) qLv=Number(f); }catch(e){}   // ?q=0~4 = 단계를 손으로 정해 비교 (주인님 확인용)
-function dprNow(){ return Math.min(devicePixelRatio,QUALITY[qLv].dpr); }
+let qAuto=true;
+try{ const f=new URLSearchParams(location.search).get('q'); if(f!==null&&/^[0-4]$/.test(f)){ qLv=Number(f); qAuto=false; } }catch(e){}   // ?q=0~4 = 단계를 손으로 정해 비교 (주인님 확인용 — 이때는 저절로 바꾸지 않음)
+try{ localStorage.removeItem('covv-field-q'); }catch(e){}   // 예전 순서로 기억한 단계는 지움
+function dprNow(){ return Math.min(devicePixelRatio,MAX_DPR); }   // 화질 단계와 상관없이 늘 같은 선명도
 
 // r134는 재질 색을 선형값으로 받음 → hex를 그대로 넣으면 물빠져 보여서 변환해서 넣음
 const C=hex=>new THREE.Color(hex).convertSRGBToLinear();
@@ -1762,10 +1767,10 @@ resize();
 })();
 
 /* ── 자동 화질: 느린 컴퓨터에서 움직임이 끊기지 않게 ──
-   그린 프레임 사이 시간을 재서 목표(FPS)보다 Q_HOLD 동안 꾸준히 느리면 한 단계 내림 (해상도 → 풀 · 꽃 수 → 해상도 더)
-   한 번 내린 단계로는 다시 올리지 않음(오르내리며 선명했다 흐렸다 하지 않게) · 고른 단계는 이 브라우저에 기억
+   그린 프레임 사이 시간을 재서 목표(FPS)보다 Q_HOLD 동안 꾸준히 느리면 한 단계 내림 (풀 · 꽃 수만 — 선명도는 그대로), Q_UP 동안 넉넉하면 한 단계 올려 봄
+   느렸던 단계로는 이번 방문에서 다시 올리지 않음(qMin — 선명했다 흐렸다 오르내리지 않게) · 고른 단계는 이 브라우저에 기억
    가만히 둔 들판(IDLE_FPS로 일부러 느림)과 처음 Q_WARM은 재지 않음 */
-let qAvg=0, qSlowFor=0, qWait=0, qT0=0, fpsAvg=0;
+let qAvg=0, qSlowFor=0, qFastFor=0, qWait=0, qT0=0, fpsAvg=0, qMin=0;   // qMin = 이번 방문에서 올라갈 수 있는 가장 좋은 단계
 const fpsEl=(()=>{ try{ if(!new URLSearchParams(location.search).has('fps')) return null; }catch(e){ return null; } const p=document.createElement('p'); p.className='field-fps'; p.setAttribute('aria-hidden','true'); stage.appendChild(p); return p; })();   // ?fps = 주인님 확인용 숫자판
 function applyQuality(){
   const Q=QUALITY[qLv];
@@ -1776,15 +1781,19 @@ function applyQuality(){
 }
 function qSample(now,gap,idle){
   if(gap>0&&gap<Q_GAP) fpsAvg=fpsAvg?fpsAvg+(gap-fpsAvg)*.1:gap;
-  if(fpsEl&&fpsAvg) fpsEl.textContent=`${Math.round(1000/fpsAvg)} fps · 화질 ${qLv+1}/${QUALITY.length}`;
-  if(idle||gap>=Q_GAP){ qSlowFor=0; return; }
+  if(fpsEl&&fpsAvg) fpsEl.textContent=`${Math.round(1000/fpsAvg)} fps · 화질 ${qLv+1}/${QUALITY.length}${qAuto?'':' (고정)'}`;
+  if(idle||gap>=Q_GAP){ qSlowFor=qFastFor=0; return; }
   if(!qT0) qT0=now;
-  if(now-qT0<Q_WARM||now<qWait||qLv>=QUALITY.length-1) return;
+  if(!qAuto||now-qT0<Q_WARM||now<qWait) return;
   qAvg=qAvg?qAvg+(gap-qAvg)*.1:gap;
-  if(qAvg>1000/FPS*Q_SLOW){
-    qSlowFor+=gap;
-    if(qSlowFor>=Q_HOLD){ qLv++; applyQuality(); qSlowFor=0; qAvg=0; qWait=now+Q_HOLD; }
-  } else qSlowFor=0;
+  const want=1000/FPS, set=lv=>{ qLv=lv; applyQuality(); qSlowFor=qFastFor=0; qAvg=0; qWait=now+Q_HOLD; };
+  if(qAvg>want*Q_SLOW){
+    qFastFor=0; qSlowFor+=gap;
+    if(qSlowFor>=Q_HOLD&&qLv<QUALITY.length-1){ qMin=qLv+1; set(qLv+1); }   // 이 단계는 이번 방문에서 다시 안 씀
+  } else if(qAvg<want*Q_FAST){
+    qSlowFor=0; qFastFor+=gap;
+    if(qFastFor>=Q_UP&&qLv>qMin) set(qLv-1);   // 넉넉하면 한 단계 선명하게
+  } else qSlowFor=qFastFor=0;
 }
 if(qLv) applyQuality();   // 지난번에 고른 단계 · 소프트웨어 그래픽 · ?q
 
@@ -1891,7 +1900,7 @@ if(window.covvWallet&&window.covvWallet.state.look&&window.covvWallet.state.look
 // 디버그용: 브라우저 창이 가려져 있어도 시간을 직접 흘려서 확인할 수 있게
 window._field={renderer,scene,camera,coves,player,popCove,amb,items,collected,spawnAmb,popAmb,dropItem,changeCoveColor,shop,pics,slider,keyrings,TREES,
 
-  quality(n){ if(n>=0&&n<QUALITY.length){ qLv=n; applyQuality(); } return {level:qLv,dpr:renderer.getPixelRatio(),grass:grassMesh&&grassMesh.count,flower:flowerMesh&&flowerMesh.count}; },   // 확인용: _field.quality(0~4)
+  quality(n){ if(n>=0&&n<QUALITY.length){ qLv=n; applyQuality(); } return {level:qLv,min:qMin,dpr:renderer.getPixelRatio(),grass:grassMesh&&grassMesh.count,flower:flowerMesh&&flowerMesh.count}; },   // 확인용: _field.quality(0~4)
   qSample,
   step(sec){ if(first){ first=false; loading&&loading.classList.add('hide'); startIntro(); player.state='emerge'; player.g.group.visible=true; }
     for(let t=0;t<sec;t+=1/60) update(1/60); renderer.render(scene,camera); }};
