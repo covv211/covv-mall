@@ -27,8 +27,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Hahmlet:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
     <!-- 외부 파일의 integrity = 원본 파일의 지문. 누가 CDN 파일을 바꿔치기하면 지문이 달라져서 브라우저가 실행하지 않음 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" integrity="sha384-uR1wgObmx89ZQ4VVXHdzjbDJZ1PvBK01K+E3GebmaBKdZ87qRJvBWPoPbzWeEd5T" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="stylesheet" href="default.css?v=1110w">
-    <link rel="stylesheet" href="style.css?v=1110w">
+    <link rel="stylesheet" href="default.css?v=1110x">
+    <link rel="stylesheet" href="style.css?v=1110x">
 </head>
 <body>
 
@@ -429,6 +429,8 @@
                 </section>
             </div>
         </div>
+        <!-- 맨 위로 (아래 화면 맨 위로 단추와 같은 모양 — 상품 창은 맨 앞에 떠서 바깥 단추가 가려짐 → 창 안에 하나 더. 창을 내리면 나타나고, 누르면 창 맨 위로 · checkout.js) -->
+        <button class="go-top" type="button" data-pd-top aria-label="맨 위로"></button>
     </dialog>
 
     <!-- 상품 창 위에 뜨는 안내 창 3개: 멘케트 상품 상세의 신규 가입 혜택 · 카드 혜택 · 배송 정보 창(머리 · 요약 상자 · 표 · 꼭 확인해 주세요 · 버튼 줄)을 코브 몰 모양으로
@@ -663,13 +665,13 @@
 
     <!-- ?v=날짜 : 파일을 고치면 숫자를 바꿔야 방문자 브라우저가 옛 파일(캐시) 대신 새 파일을 받음 (style.css·screens.js 안 office.js도 같이) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js" integrity="sha512-334uBDwY0iZ2TklV1OtDtBW9vp7jjP7SWRzT7Ehu1fdtPIjTpCwTSFb8HI/YBau9L1/kRBEOALrS229Kry4yFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="checkout-rules.js?v=1110w"></script>
-    <script src="mall.js?v=1110w"></script>
-    <script src="checkout.js?v=1110w"></script>
-    <script src="hero.js?v=1110w"></script>
-    <script src="field.js?v=1110w"></script>
-    <script src="myoffice.js?v=1110w"></script>
-    <script src="screens.js?v=1110w"></script>
-    <script src="visitors.js?v=1110w"></script>
+    <script src="checkout-rules.js?v=1110x"></script>
+    <script src="mall.js?v=1110x"></script>
+    <script src="checkout.js?v=1110x"></script>
+    <script src="hero.js?v=1110x"></script>
+    <script src="field.js?v=1110x"></script>
+    <script src="myoffice.js?v=1110x"></script>
+    <script src="screens.js?v=1110x"></script>
+    <script src="visitors.js?v=1110x"></script>
 </body>
 </html>

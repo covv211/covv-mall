@@ -53,7 +53,7 @@ function loadOffice(){
   if(!window.THREE){ if(st) st.classList.add('no-webgl'); return; }
   officeLoaded=true;
   if(st) st.classList.remove('no-webgl');
-  loadScript('office.js?v=1110w')
+  loadScript('office.js?v=1110x')
     .catch(()=>{   // 한 번 실패해도 다음에 열 때 다시 시도
       officeLoaded=false;
       document.querySelectorAll('script[data-office]').forEach(s=>s.remove());
@@ -117,22 +117,23 @@ async function close(opts={}){
 /* 위로 가기 (.go-top, covv.html 맨 아래 · 오른쪽 아래 고정): 아래 화면(각자 스크롤 상자)을 맨 위(0)에서 조금이라도 내리면 바로 나타나고, 누르면 맨 위로 굴러감 */
 const GO_TOP_SCREENS=['about','work','office','mall'];   // 소개 · 작업물 · 내 오피스 · 코브 몰
 const GO_TOP_MS=[350,900];                              // 맨 위로 굴러가는 시간(ms) — 멀수록 길게, 이 사이에서
-const goTop=document.querySelector('.go-top');
+const goTop=document.querySelector('body > .go-top');   // 상품 창 안의 맨 위로(checkout.js)와 구별
 let goTopRaf=0;
 const goTopStop=()=>{ cancelAnimationFrame(goTopRaf); goTopRaf=0; };
 const goTopScr=()=>current&&GO_TOP_SCREENS.includes(current)?screens[current]:null;
 const paintGoTop=()=>{ const s=goTopScr(); goTop.classList.toggle('show',!!s&&s.scrollTop>0); };
+const rollHeld=new WeakSet();   // 직접 굴리면 멈추게 리스너를 단 스크롤 상자
+function rollTop(s){   // 스크롤 상자 s를 맨 위까지 굴림 — 화면 맨 위로 · 상품 창 맨 위로(checkout.js, window.covvRollTop)가 같이 씀 · s가 없으면 굴리던 것만 멈춤
+  goTopStop(); const from=s?s.scrollTop:0; if(!from) return;
+  if(!rollHeld.has(s)){ rollHeld.add(s); ['wheel','touchstart'].forEach(t=>s.addEventListener(t,goTopStop,{passive:true})); }   // 올라가는 중에 직접 굴리면 손에 맡김 (서로 끌어당기지 않게)
+  const dur=Math.max(GO_TOP_MS[0],Math.min(GO_TOP_MS[1],from*.3)), t0=performance.now();
+  const step=now=>{ const k=Math.max(0,Math.min((now-t0)/dur,1)), e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2; s.scrollTop=from*(1-e); goTopRaf=k<1?requestAnimationFrame(step):0; };
+  goTopRaf=requestAnimationFrame(step);
+}
+window.covvRollTop=rollTop;
 if(goTop){
-  GO_TOP_SCREENS.forEach(id=>{ const s=screens[id]; if(!s) return;
-    s.addEventListener('scroll',paintGoTop,{passive:true});
-    ['wheel','touchstart'].forEach(t=>s.addEventListener(t,goTopStop,{passive:true}));   // 올라가는 중에 직접 굴리면 손에 맡김 (서로 끌어당기지 않게)
-  });
-  goTop.addEventListener('click',()=>{   // 동작 줄이기여도 화면 전환(페이드)이 아니라 스크롤로 올라감(주인님 결정) → 브라우저 smooth는 동작 줄이기면 바로 뛰는 곳이 있어 직접 굴림
-    goTopStop(); const s=goTopScr(), from=s?s.scrollTop:0; if(!from) return;
-    const dur=Math.max(GO_TOP_MS[0],Math.min(GO_TOP_MS[1],from*.3)), t0=performance.now();
-    const step=now=>{ const k=Math.max(0,Math.min((now-t0)/dur,1)), e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2; s.scrollTop=from*(1-e); goTopRaf=k<1?requestAnimationFrame(step):0; };
-    goTopRaf=requestAnimationFrame(step);
-  });
+  GO_TOP_SCREENS.forEach(id=>{ const s=screens[id]; if(s) s.addEventListener('scroll',paintGoTop,{passive:true}); });
+  goTop.addEventListener('click',()=>rollTop(goTopScr()));   // 동작 줄이기여도 화면 전환(페이드)이 아니라 스크롤로 올라감(주인님 결정) → 브라우저 smooth는 동작 줄이기면 바로 뛰는 곳이 있어 직접 굴림
   addEventListener('covv-screen',()=>{ goTopStop(); paintGoTop(); });   // 다른 화면 · 들판으로 가면 멈추고 숨김
 }
 

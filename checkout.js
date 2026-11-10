@@ -320,7 +320,8 @@ function openProduct(id){
   const g=$d('.pd-gosi'); if(g) g.open=false;   // 다른 상품을 열면 고시 표는 접힌 채로 (종류만 바꿀 땐 그대로 — fillPd)
   if(!dlg.open) dlg.showModal();
   liftToast();   // 창을 열기 직전에 뜬 알림(장바구니에서 빠진 상품 등)이 창 뒤에 가려지지 않게
-  dlg.scrollTop=0; $d('.pd-info').scrollTop=0; if(optBox) optBox.scrollLeft=0;   // 다른 상품을 열면 맨 위(큰 사진)부터 · 휴대폰 종류 띠도 처음부터
+  if(window.covvRollTop) window.covvRollTop(null);   // 맨 위로 굴러가던 중에 닫았다 열어도 새 창은 맨 위 그대로
+  dlg.scrollTop=0; $d('.pd-info').scrollTop=0; if(optBox) optBox.scrollLeft=0; paintPdTop();   // 다른 상품을 열면 맨 위(큰 사진)부터 · 휴대폰 종류 띠도 처음부터
   paintReviews();   // 창이 열린 뒤 (열려 있어야 자동 넘김이 켜짐)
   $d('[data-pd-buy]').focus({preventScroll:true});   // 그냥 focus()면 짧은 창 · 휴대폰에서 버튼 쪽으로 다시 스크롤돼 위의 되감기가 풀림
 }
@@ -332,9 +333,27 @@ function paintPd(){
   $d('[data-qty="1"]').disabled=pdQty>=R.QTY_MAX;
 }
 function closePd(){ if(dlg&&dlg.open) dlg.close(); }
+/* 상품 창 맨 위로 (button.go-top = 아래 화면 맨 위로와 같은 단추, 자리는 style.css .pd .go-top): 창을 맨 위에서 조금이라도 내리면 나타나고, 누르면 맨 위로 굴러감(screens.js covvRollTop)
+   휴대폰 · 좁은 창은 창 전체가 스크롤 · 넓은 화면은 사진 칸 쪽(창)이 스크롤 — 정보 칸(.pd-info)은 따로 스크롤되는 짧은 칸이라 안 셈 */
+const pdTop=dlg&&dlg.querySelector('[data-pd-top]');
+function paintPdTop(){ if(pdTop) pdTop.classList.toggle('show',dlg.scrollTop>0); }
 if(dlg){
+  dlg.addEventListener('scroll',paintPdTop,{passive:true});
+  const bar=$d('.pd-buybar');   // 휴대폰은 아래에 붙는 구매 띠 위에 맨 위로 단추를 둠 → 띠 높이(글자 줄 수 · 아이폰 아래 여백에 따라 다름)를 --pd-bar로
+  if(bar&&window.ResizeObserver) new ResizeObserver(()=>{ dlg.style.setProperty('--pd-bar',bar.offsetHeight+'px'); }).observe(bar);
+  // 휴대폰 뒤로 가기로도 안 닫힘 (주인님 11-10: ✕로만) — 안드로이드 크롬의 뒤로 몸짓 = 창의 cancel → 막음 (Esc는 아래 keydown이 먼저 받아 그대로 닫음)
+  // 아이폰 밀어서 뒤로 · 브라우저 뒤로 단추 = popstate → screens.js(나중에 불러옴)가 화면을 바꾸기 전에 멈추고 주소만 앞으로 되돌림 (forward가 부르는 popstate도 같이 삼킴)
+  // 크롬은 사이에 아무것도 안 누르고 뒤로를 또 하면 cancel을 못 막게 해 둠(사이트가 사람을 가두지 못하게) → 그때는 닫힘
+  dlg.addEventListener('cancel',e=>e.preventDefault());
+  let pdFwd=0;
+  addEventListener('popstate',e=>{
+    if(pdFwd){ clearTimeout(pdFwd); pdFwd=0; e.stopImmediatePropagation(); return; }   // 아래 forward()로 돌아온 것 = 원래 자리
+    if(!dlg.open) return;
+    e.stopImmediatePropagation(); history.forward(); pdFwd=setTimeout(()=>{ pdFwd=0; },1000);   // 앞 기록이 없어 popstate가 안 오면 1초 뒤 풀림 (다음 뒤로 가기를 잘못 삼키지 않게)
+  });
   dlg.addEventListener('click',e=>{
     if(e.target.closest('[data-pd-close]')){ closePd(); return; }   // ✕를 눌러야만 닫힘 — 바깥(배경)을 눌러도 안 닫힘 (주인님 11-10: 회원가입 창과 같게)
+    if(e.target.closest('[data-pd-top]')){ if(window.covvRollTop) window.covvRollTop(dlg); else dlg.scrollTop=0; $d('[data-pd-close]').focus({preventScroll:true}); return; }   // 단추가 사라지면 포커스가 창 밖으로 빠짐 → 창 첫 단추(✕)로
     const tp=e.target.closest('[data-tip]'); if(tp){ openTip(tp.dataset.tip); return; }   // 혜택 줄의 ⓘ → 안내 창
     if(e.target.closest('[data-pd-share]')){ sharePd(); return; }   // 가격 옆 🔗 공유
     if(e.target.closest('[data-rv-write]')){ openWrite(); return; }   // 리뷰 '리뷰 쓰기'

@@ -1503,3 +1503,7 @@ button.go-top {
 button.go-top.show { opacity: 1; visibility: visible; transition: opacity .2s, background .2s; }   /* 소개 · 작업물 · 내 오피스 · 코브 몰을 맨 위에서 내리면 바로 (screens.js), 숨을 땐 포커스에서도 빠지게 visibility */
 button.go-top:hover { background-color: rgba(222, 222, 222, .8); }   /* background 줄임말이면 화살표 그림까지 지워짐 */
 @media (max-width: 720px) { button.go-top { right: 16px; bottom: 16px; width: 60px; height: 60px; } }
+/* 상품 창 안의 맨 위로 (checkout.js): 모양 · 크기는 위와 같고 자리만 창에 맞춤 — 넓은 화면은 사진 칸 오른쪽 아래(정보 칸 464px · 창 스크롤바 14px 왼쪽으로 20px) */
+.pd .go-top { right: calc((100% - min(1170px, 100% - 32px)) / 2 + 498px); bottom: 36px; }   /* 창 = 가운데 min(1170px, 화면 - 32px) · 아래 여백 16px */
+@media (max-width: 900px) { .pd .go-top { right: 28px; bottom: 28px; } }   /* 창 전체가 스크롤 → 창 오른쪽 아래 (창 둘레 16 + 12) */
+@media (max-width: 720px) { .pd .go-top { bottom: calc(28px + var(--pd-bar, 0px)); } }   /* 휴대폰: 아래에 붙는 구매 띠(.pd-buybar, 높이는 checkout.js) 위 */
