@@ -27,8 +27,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Hahmlet:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
     <!-- 외부 파일의 integrity = 원본 파일의 지문. 누가 CDN 파일을 바꿔치기하면 지문이 달라져서 브라우저가 실행하지 않음 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" integrity="sha384-uR1wgObmx89ZQ4VVXHdzjbDJZ1PvBK01K+E3GebmaBKdZ87qRJvBWPoPbzWeEd5T" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="stylesheet" href="default.css?v=1110v">
-    <link rel="stylesheet" href="style.css?v=1110v">
+    <link rel="stylesheet" href="default.css?v=1110w">
+    <link rel="stylesheet" href="style.css?v=1110w">
 </head>
 <body>
 
@@ -70,7 +70,7 @@
             <!-- 쇼핑 안내 (문구가 몇 초마다 바뀜, 누르면 코브 몰) -->
             <button class="promo" id="promo" type="button" data-go="mall" aria-label="코브 몰로 가기 — 금화를 모아서 쇼핑하세요">
                 <span class="promo-text" id="promoText">💰 금화를 모아서 쇼핑하세요!</span>
-                <span class="promo-go" aria-hidden="true">→</span>
+                <span class="promo-go" aria-hidden="true"><span class="ico-arrow right"></span></span>
             </button>
             <h1>코브's</h1>
             <p>코브들이 사는 작은 들판</p>
@@ -98,7 +98,7 @@
     <!-- 소개 (✏️ 문구는 임시 — 직접 수정하세요) -->
     <section class="screen" data-screen="about" id="about" aria-label="소개">
         <div class="screen-inner">
-            <button class="back" type="button" data-close>← 들판으로</button>
+            <button class="back" type="button" data-close><span class="ico-arrow left" aria-hidden="true"></span>들판으로</button>
             <div class="section-head">
                 <p class="eyebrow">ABOUT</p>
                 <h2>소개</h2>
@@ -164,7 +164,7 @@
     <!-- 작업물 -->
     <section class="screen" data-screen="work" id="work" aria-label="작업물">
         <div class="screen-inner">
-            <button class="back" type="button" data-close>← 들판으로</button>
+            <button class="back" type="button" data-close><span class="ico-arrow left" aria-hidden="true"></span>들판으로</button>
             <div class="section-head">
                 <p class="eyebrow">WORK</p>
                 <h2>작업물</h2>
@@ -201,7 +201,7 @@
     <!-- 연락처 (✏️ 링크 주소는 직접 넣어주세요) -->
     <section class="screen" data-screen="contact" id="contact" aria-label="연락처">
         <div class="screen-inner">
-            <button class="back" type="button" data-close>← 들판으로</button>
+            <button class="back" type="button" data-close><span class="ico-arrow left" aria-hidden="true"></span>들판으로</button>
             <div class="contact">
                 <p class="eyebrow">CONTACT</p>
                 <h2>커피 한잔 하면서 이야기해요 ☕</h2>
@@ -218,7 +218,7 @@
     <!-- 내 오피스: 방문자 각자의 미니홈피 (미니룸 3D + 프로필 + 가방·계정 + 다이어리) — 화면은 myoffice.js, 미니룸은 office.js -->
     <section class="screen screen-office" data-screen="office" id="office" aria-label="내 오피스">
         <div class="mh">
-            <button class="back" type="button" data-close>← 들판으로</button>
+            <button class="back" type="button" data-close><span class="ico-arrow left" aria-hidden="true"></span>들판으로</button>
             <div class="mh-book">
                 <header class="mh-top">
                     <h2 id="mhTitle">코브 친구의 오피스</h2>
@@ -283,7 +283,7 @@
                                 <span class="acct-mini-who">👤 <b data-mini-name>코브 친구</b> <span class="acct-mini-uid" data-mini-uid></span></span>
                                 <span>💰 금화 <b data-mini-coin>0</b></span>
                                 <span>🎟️ 쿠폰 <b data-mini-coupon>0장</b></span>
-                                <button type="button" class="acct-mini-go" data-goto-account>계정 정보 보기 →</button>
+                                <button type="button" class="acct-mini-go" data-goto-account>계정 정보 보기 <span class="ico-arrow right" aria-hidden="true"></span></button>
                             </div>
                             <h3 class="mh-h">최근 소식</h3>
                             <ul class="mh-log" id="mhLog"></ul>
@@ -308,14 +308,14 @@
     <!-- 코브 몰: 키링 가게 (내용은 mall.js가 채움) -->
     <section class="screen screen-mall" data-screen="mall" id="mall" aria-label="코브 몰">
         <div class="screen-inner">
-            <button class="back" type="button" data-close>← 들판으로</button>
+            <button class="back" type="button" data-close><span class="ico-arrow left" aria-hidden="true"></span>들판으로</button>
             <!-- 히어로: 1분 2D 모션 광고 (캔버스는 hero.js가 그림, 소리 없이 반복 · 화면 밖이거나 코브 몰이 닫히면 멈춤) -->
             <div class="mall-hero" id="mallHero">
                 <canvas class="hero-film" id="heroFilm" width="1280" height="720" role="img" aria-label="코브 몰 1분 광고. 해질녘 들판에서 거품 속 코브가 눈을 뜨고, 낙하산으로 내려와 금화 100개를 모아 쿠폰 1장(키링 1개 100원 할인)을 만들어요. 가게를 지나 키링 진열대에서 하트를 주고, 사탕으로 색을 바꾼 뒤 ‘코브 몰 — 들판에서 놀고, 키링으로 데려가요’로 끝나요."></canvas>
                 <div class="hero-bar">
                     <button class="hero-play" type="button" data-hero-play aria-label="광고 멈추기">❚❚</button>
                     <span class="hero-track" aria-hidden="true"><i data-hero-fill></i></span>
-                    <button class="hero-shop" type="button" data-hero-shop>키링 보러 가기 ↓</button>
+                    <button class="hero-shop" type="button" data-hero-shop>키링 보러 가기 <span class="ico-arrow down" aria-hidden="true"></span></button>
                 </div>
             </div>
             <div class="section-head">
@@ -340,7 +340,7 @@
     <!-- 주문/결제 (네이버 주문서 참고: 왼쪽 주문 정보 · 오른쪽 결제 금액, 내용은 checkout.js가 채움 — 맨 위 '내 가방'은 mall.js가 채움) -->
     <section class="screen screen-checkout" data-screen="checkout" id="checkout" aria-label="주문/결제">
         <div class="screen-inner">
-            <button class="back" type="button" data-go="mall">← 코브 몰로</button>
+            <button class="back" type="button" data-go="mall"><span class="ico-arrow left" aria-hidden="true"></span>코브 몰로</button>
             <div class="section-head">
                 <p class="eyebrow">ORDER</p>
                 <h2>주문/결제</h2>
@@ -421,7 +421,7 @@
                     <div class="pd-rv-head">
                         <div class="pd-rv-title"><h3 id="pdReviewTitle">리뷰 <span class="pd-rv-count" data-rv-count></span></h3><button class="pd-tip" type="button" data-tip="tipReview" aria-haspopup="dialog" aria-label="리뷰 운영 안내">i</button></div>
                         <button class="pd-rv-write" type="button" data-rv-write aria-haspopup="dialog">리뷰 쓰기</button>
-                        <div class="pd-rv-ctrl"><button class="pd-rv-btn" type="button" data-rv="-1" aria-label="이전 리뷰">‹</button><button class="pd-rv-btn pd-rv-play" type="button" data-rv-play aria-pressed="false" aria-label="리뷰 자동 넘김 멈춤"></button><button class="pd-rv-btn" type="button" data-rv="1" aria-label="다음 리뷰">›</button></div>
+                        <div class="pd-rv-ctrl"><button class="pd-rv-btn" type="button" data-rv="-1" aria-label="이전 리뷰"><span class="ico-arrow left" aria-hidden="true"></span></button><button class="pd-rv-btn pd-rv-play" type="button" data-rv-play aria-pressed="false" aria-label="리뷰 자동 넘김 멈춤"></button><button class="pd-rv-btn" type="button" data-rv="1" aria-label="다음 리뷰"><span class="ico-arrow right" aria-hidden="true"></span></button></div>
                     </div>
                     <div class="pd-rv"><ul class="pd-rv-track" id="pdReviews"></ul></div>
                     <div class="pd-rv-dots" data-rv-dots aria-hidden="true"></div>
@@ -663,13 +663,13 @@
 
     <!-- ?v=날짜 : 파일을 고치면 숫자를 바꿔야 방문자 브라우저가 옛 파일(캐시) 대신 새 파일을 받음 (style.css·screens.js 안 office.js도 같이) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js" integrity="sha512-334uBDwY0iZ2TklV1OtDtBW9vp7jjP7SWRzT7Ehu1fdtPIjTpCwTSFb8HI/YBau9L1/kRBEOALrS229Kry4yFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="checkout-rules.js?v=1110v"></script>
-    <script src="mall.js?v=1110v"></script>
-    <script src="checkout.js?v=1110v"></script>
-    <script src="hero.js?v=1110v"></script>
-    <script src="field.js?v=1110v"></script>
-    <script src="myoffice.js?v=1110v"></script>
-    <script src="screens.js?v=1110v"></script>
-    <script src="visitors.js?v=1110v"></script>
+    <script src="checkout-rules.js?v=1110w"></script>
+    <script src="mall.js?v=1110w"></script>
+    <script src="checkout.js?v=1110w"></script>
+    <script src="hero.js?v=1110w"></script>
+    <script src="field.js?v=1110w"></script>
+    <script src="myoffice.js?v=1110w"></script>
+    <script src="screens.js?v=1110w"></script>
+    <script src="visitors.js?v=1110w"></script>
 </body>
 </html>

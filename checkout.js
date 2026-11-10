@@ -631,7 +631,7 @@ root.innerHTML=`
       <p class="sr-only" data-co-live aria-live="polite"></p>
     </aside>
   </div>
-  <div class="co-bar" data-co-bar hidden><span>총 결제 금액 <b></b></span><button type="button" class="co-btn" data-co-jump>결제하러 가기 ↓</button></div>
+  <div class="co-bar" data-co-bar hidden><span>총 결제 금액 <b></b></span><button type="button" class="co-btn" data-co-jump>결제하러 가기 <span class="ico-arrow down" aria-hidden="true"></span></button></div>
 `;
 }
 const $=s=>root.querySelector(s);
