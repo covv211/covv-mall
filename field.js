@@ -5,7 +5,7 @@
    - 큰 코브(주인공): 땅을 클릭하면 그 자리로 걸어감, 누른 채 끌면 마우스를 따라감(브루노 자동차처럼),
      키보드 방향키/WASD도 됨. 카메라가 코브를 따라다님
    - 작은 코브 4마리가 땅에서 쏙 나와 거품 풍선을 타고 떠오름
-   - 거품을 누르면 펑! → 코브가 낙하산을 펴고 살랑살랑 내려와 땅에 닿는 순간 그 코브의 화면(소개/작업물/연락처/오피스)으로 전환
+   - 거품을 누르면 펑! → 코브가 그대로 떨어져 땅에 닿는 순간 그 코브의 화면(소개/작업물/연락처/오피스)으로 전환
    - 빈 거품이 들판 곳곳에서 떠올라 천장에 닿으면 펑 → 가끔 아이템(별·하트·코인·사탕·보석)을 떨굼, 코브가 지나가면 주움
    - 아주 가끔 히든 컬러 아이템(무지개 물방울) → 먹으면 코브 색이 바뀜 (드물게 무지개 코브)
    - 코브 몰: 들판 한쪽 키링 가게(점원 코브). 간판의 '🛍️ 코브 몰' 이름표(또는 메뉴)를 누르면 코브 몰 화면으로 — 가게 앞에 걸어가도 저절로 열리지 않음(2026-10-04 주인님 요청). 주운 아이템은 가방(mall.js의 covvWallet)에 저장
@@ -49,8 +49,7 @@ const COVES=[
 const BUBBLE_R=0.95;
 const S=0.64, FOOT=0.64;           // 작은 코브 크기, 서 있을 때 몸 중심 높이(발바닥 = 몸 중심 아래 1.0×크기)
 const POP_SLOW=2;                  // 거품 터짐 속도 (1=원래 속도, 2=2배 느리게)
-const PARA_TIME=1.8;               // 거품이 터진 뒤 낙하산 타고 땅에 닿기까지 걸리는 시간(초) — 클수록 천천히
-const CHUTE_L=2.2*S;               // 코브 몸 중심 ~ 낙하산까지 거리 (흔들릴 때 낙하산 쪽을 축으로 매달려 흔들림)
+const FALL_G=4.9;                  // 거품이 터진 뒤 떨어지는 중력(단위/초²) — 실제(9.8)의 절반이라 떨어지는 게 눈에 보임 (거품 높이면 1.3초 안팎에 착지)
 
 /* ── 빈 거품 + 아이템 ── */
 const AMB_MAX=IS_TOUCH?4:6;        // 동시에 떠오르는 빈 거품 최대 수
@@ -894,59 +893,19 @@ function makeBubbleMat(tint){
   });
 }
 
-/* ── 낙하산 (작은 코브마다 하나 — 거품이 터지면 손에서 활짝 펼침) ── */
-const CHUTE_GLOW=sh=>{   // 해질녘에 어둡지 않게 살짝 스스로 빛남
-  sh.fragmentShader=sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=vColor.rgb*0.3;');
-};
-const CHUTE_HANDS=[0,.35,.2];   // 낙하산 줄을 잡는 두 손 사이 (코브 몸 기준)
-function makeChute(body){
-  // 8쪽 돔 — 코브 색과 크림색 줄무늬
-  const geo=new THREE.SphereGeometry(1,8,3,0,Math.PI*2,0,Math.PI*.42).toNonIndexed();
-  const p=geo.attributes.position, col=new Float32Array(p.count*3), cA=C(body).multiplyScalar(.78), cB=C('#fff4f8');   // 줄무늬가 또렷하게 코브 색은 조금 진하게
-  for(let i=0;i<p.count;i+=3){
-    const cx=(p.getX(i)+p.getX(i+1)+p.getX(i+2))/3, cz=(p.getZ(i)+p.getZ(i+1)+p.getZ(i+2))/3;
-    const c=Math.floor(((Math.atan2(cz,-cx)+Math.PI*2)%(Math.PI*2))/(Math.PI/4))%2?cB:cA;
-    for(let j=0;j<3;j++){ col[(i+j)*3]=c.r; col[(i+j)*3+1]=c.g; col[(i+j)*3+2]=c.b; }
-  }
-  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
-  const RIM_Y=1.75, RIM_R=1.65*Math.sin(Math.PI*.42);   // 손 위로 끝단 높이, 끝단 반지름
-  geo.scale(1.65,1.05,1.65); geo.translate(0,RIM_Y-1.05*Math.cos(Math.PI*.42),-CHUTE_HANDS[2]);
-  const mat=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide,roughness:.75,metalness:0,transparent:true});
-  mat.onBeforeCompile=CHUTE_GLOW;
-  const canopy=new THREE.Mesh(geo,mat);
-  // 줄 6가닥: 왼쪽 끝단 3곳 → 왼손, 오른쪽 3곳 → 오른손
-  const lp=[];
-  for(const d of [0,45,315,135,180,225]){
-    const a=d*Math.PI/180, x=-Math.cos(a)*RIM_R, z=Math.sin(a)*RIM_R-CHUTE_HANDS[2];
-    lp.push(x,RIM_Y,z, x<0?-.6:.6,0,0);
-  }
-  const lg=new THREE.BufferGeometry(); lg.setAttribute('position',new THREE.Float32BufferAttribute(lp,3));
-  const lineM=new THREE.LineBasicMaterial({color:C('#6b4a5e'),transparent:true});
-  const group=new THREE.Group(); group.add(canopy,new THREE.LineSegments(lg,lineM));
-  group.position.fromArray(CHUTE_HANDS); group.visible=false;
-  return {group,mat,lineM,fold:-1,owner:null,p0:new THREE.Vector3(),s0:new THREE.Vector3(),q0:new THREE.Quaternion()};
-}
-function resetChute(ch){
-  if(ch.owner&&ch.group.parent!==ch.owner) ch.owner.add(ch.group);   // 접히는 동안 떼어 놨던 낙하산을 다시 코브에 달아 둠
-  ch.group.visible=false; ch.fold=-1;
-  ch.group.position.fromArray(CHUTE_HANDS); ch.group.rotation.set(0,0,0); ch.group.scale.set(1,1,1);
-  ch.mat.opacity=ch.lineM.opacity=1;
-}
-
 let hoverCv=null, hoverAmb=null, navCv=null, paused=false;
 const coves=COVES.map((c,i)=>{
   const g=makeCove(c.body);
   g.group.scale.setScalar(S); g.group.visible=false; scene.add(g.group);
-  const chute=makeChute(c.body); chute.owner=g.group; g.group.add(chute.group);
   const bubble=new THREE.Mesh(BUBBLE_GEO,makeBubbleMat(c.tint)); bubble.visible=false; bubble.renderOrder=5; scene.add(bubble);
   const tag=document.createElement('button');
   tag.type='button'; tag.className='bubble-tag';
   tag.innerHTML=`<span aria-hidden="true">${c.emoji}</span> ${c.label}`;
   tag.setAttribute('aria-label',`${c.label} 거품 터트리기`);
   tagsEl.appendChild(tag);
-  const cv={c,i,g,bubble,chute,blob:makeBlob(),tag,state:'idle',t:0,delay:0,phase:i*1.7,
+  const cv={c,i,g,bubble,blob:makeBlob(),tag,state:'idle',t:0,delay:0,phase:i*1.7,
     home:new THREE.Vector3().fromArray(c.home),ground:new THREE.Vector3(c.home[0],0,c.home[2]),pos:new THREE.Vector3(),
-    vy:0,fx:0,fy:0,fz:0,faceY:0,chuteAt:0,squash:0,go:null,bScale:0,hover:0,burstT:-1,shown:false};
+    vy:0,fx:0,fy:0,fz:0,faceY:0,squash:0,go:null,bScale:0,hover:0,burstT:-1,shown:false};
   tag.addEventListener('click',()=>popCove(cv,true));
   tag.addEventListener('mouseenter',()=>{ hoverCv=cv; });
   tag.addEventListener('mouseleave',()=>{ if(hoverCv===cv) hoverCv=null; });
@@ -1025,8 +984,7 @@ const sfx=(()=>{
   return {
     unlock(){ unlocked=true; },
     pop(){ tone(900,170,0.11,0.2); noise(0.04,1800,0.12,'highpass'); },
-    chute(){ tone(240,420,0.18,0.07,'triangle'); noise(0.16,650,0.08,'bandpass'); },   // 낙하산 펄럭
-    land(){ tone(190,90,0.12,0.12); },                                                  // 사뿐 착지
+    land(){ tone(190,90,0.12,0.12); },                                                  // 쿵 착지
     blip(){ tone(520,860,0.07,0.05,'triangle'); },
     tap(){ tone(700,1000,0.05,0.04,'triangle'); },
     soft(v){ tone(1250,480,0.07,v); },                     // 빈 거품이 저절로 터질 때 (작게)
@@ -1053,7 +1011,6 @@ function popCove(cv,navigate){
   if(navigate){ if(navCv&&navCv!==cv) navCv.go=null; navCv=cv; cv.go=cv.c.id; } else cv.go=null;
   const g=cv.g.group;
   cv.vy=0.65; cv.fx=g.position.x; cv.fy=g.position.y; cv.fz=g.position.z; cv.faceY=g.rotation.y;
-  cv.chuteAt=g.position.y-FOOT>1.3?0.3:0;   // 높이 있으면 살짝 뚝 떨어졌다가 펼침, 낮으면 바로 펼침
   if(hoverCv===cv) hoverCv=null;
   setState(cv,'fall');
   return true;
@@ -1061,7 +1018,7 @@ function popCove(cv,navigate){
 function respawn(cv){
   const g=cv.g.group;
   cv.ground.set(g.position.x,0,g.position.z);
-  g.position.y=FOOT; g.rotation.set(0,g.rotation.y,0); cv.squash=0; resetChute(cv.chute);
+  g.position.y=FOOT; g.rotation.set(0,g.rotation.y,0); cv.squash=0;
   cv.bubble.material.uniforms.uOpacity.value=1; cv.bubble.visible=true; cv.bScale=0; cv.burstT=-1;
   cv.go=null; if(navCv===cv) navCv=null;
   setState(cv,'inflate');
@@ -1074,7 +1031,6 @@ function goScreen(cv){   // 떨어진 코브가 땅에 닿는 순간 화면 전�
 }
 
 /* ── 매 프레임: 작은 코브 한 마리 ── */
-const hang=new THREE.Vector3(), foldQ=new THREE.Quaternion(), Z_AXIS=new THREE.Vector3(0,0,1);
 function updateCove(cv,dt,T){
   const g=cv.g, grp=g.group, R=BUBBLE_R;
   cv.t+=dt;
@@ -1118,37 +1074,16 @@ function updateCove(cv,dt,T){
       ride(cv,T);
       break;
     }
-    case 'fall':{     // 거품이 터지면 → 살짝 뚝 → 낙하산 활짝 → 살랑살랑 내려옴
-      const ch=cv.chute;
-      if(cv.t<cv.chuteAt) cv.vy-=9*dt;
-      else {
-        if(!ch.group.visible){ resetChute(ch); ch.group.visible=true; sfx.chute(); }
-        // 남은 높이 ÷ 남은 시간으로 속도를 맞춰서, 거품이 높든 낮든 PARA_TIME에 딱 착지
-        const want=Math.min(4.5,Math.max(1.2,(cv.fy-FOOT)/Math.max(0.2,PARA_TIME-cv.t)));
-        cv.vy+=(-want-cv.vy)*Math.min(1,dt*6);   // 낙하산이 공기를 받아 부드럽게
-      }
-      cv.fy+=cv.vy*dt;
-      // 손에서 낙하산이 확 펼쳐짐 (옆으로 넓어지며 위로 솟음) + 내려오는 동안 살짝 숨쉬듯 부풀었다 오므라듦
-      const ko=ch.group.visible?Math.min(1,(cv.t-cv.chuteAt)/0.5):0;
-      if(ch.group.visible){
-        const w=(0.08+0.92*easeOutBack(ko))*(1+Math.sin(T*5+cv.phase)*0.025*ko);
-        ch.group.scale.set(w,0.25+0.75*Math.min(1,ko*1.8),w);
-      }
-      // 낙하산에 매달려 흔들흔들 (땅에 가까워지면 잦아들어 똑바로 착지)
-      const ts=cv.t-cv.chuteAt, amp=0.17*ko*Math.min(1,Math.max(0,cv.fy-FOOT)/1.3);
+    case 'fall':{     // 거품이 터지면 → 살짝 튀어 올랐다가 그대로 떨어짐 (두 팔 번쩍, 발 동동)
+      cv.vy-=FALL_G*dt; cv.fy+=cv.vy*dt;
       cv.faceY=lerpAngle(cv.faceY,Math.atan2(camera.position.x-grp.position.x,camera.position.z-grp.position.z),Math.min(1,dt*2));
-      grp.rotation.set(Math.sin(ts*1.9+cv.phase)*amp*0.35,cv.faceY,Math.sin(ts*2.6+cv.phase)*amp);
-      hang.set(0,CHUTE_L,0).applyEuler(grp.rotation);   // 축 = 낙하산 → 코브가 그 아래에서 흔들림
-      grp.position.set(cv.fx-hang.x,cv.fy+CHUTE_L-hang.y,cv.fz-hang.z);
+      grp.rotation.set(Math.sin(cv.t*7+cv.phase)*.06,cv.faceY,Math.sin(cv.t*9+cv.phase)*.1);   // 떨어지며 살짝 버둥버둥
+      grp.position.set(cv.fx,cv.fy,cv.fz);
       g.bodyG.rotation.set(0,0,0);
-      poseG(g,i=>i<2?[i?-.15:.15,.62,-.1]:[0,-.05+Math.sin(T*4+i*2)*.04,Math.sin(T*3+i*Math.PI)*.06]);   // 두 손으로 줄 잡고 발 동동
-      if(grp.position.y<=FOOT){   // 사뿐 착지 → 낙하산은 접히며 사라짐
-        grp.position.y=FOOT; cv.vy=0; cv.squash=.55;
-        puff(grp.position.x,grp.position.z,.8); sfx.land();
-        if(ch.group.visible){   // 낙하산은 코브에서 떼어 제자리에서 접음 (착지 찌그러짐·콩 점프에 끌려 출렁이지 않게)
-          ch.fold=0; scene.attach(ch.group);
-          ch.p0.copy(ch.group.position); ch.s0.copy(ch.group.scale); ch.q0.copy(ch.group.quaternion);
-        }
+      poseG(g,i=>i<2?[i?-.35:.35,.75,0]:[0,-.05+Math.sin(T*9+i*2)*.08,Math.sin(T*7+i*Math.PI)*.08]);
+      if(grp.position.y<=FOOT){   // 쿵 착지 → 찌그러졌다가 콩
+        grp.position.y=FOOT; cv.vy=0; cv.squash=.8;
+        puff(grp.position.x,grp.position.z,1); sfx.land();
         setState(cv,'landed');
         if(cv.go) goScreen(cv);   // 땅에 닿는 바로 그 순간 화면 전환 시작
       }
@@ -1163,16 +1098,6 @@ function updateCove(cv,dt,T){
       if(!cv.go&&navCv!==cv&&cv.t>2.2) respawn(cv);   // 그냥 터트려 본 코브는 잠시 뒤 다시 거품 타고 올라감
       break;
     }
-  }
-  // 착지 후 낙하산이 옆으로 스르르 접히며 사라짐
-  const ch=cv.chute;
-  if(ch.fold>=0&&ch.group.visible){
-    ch.fold+=dt; const k=Math.min(ch.fold/0.7,1), e=easeInOutCubic(k);
-    ch.group.scale.set(ch.s0.x*(1+0.25*e),ch.s0.y*(1-0.8*e),ch.s0.z*(1+0.25*e));
-    ch.group.quaternion.copy(ch.q0).multiply(foldQ.setFromAxisAngle(Z_AXIS,(cv.i%2?1:-1)*0.9*e));   // 옆으로 스르르 눕듯이
-    ch.group.position.set(ch.p0.x,ch.p0.y-0.25*e,ch.p0.z);
-    ch.mat.opacity=ch.lineM.opacity=1-k;
-    if(k>=1) resetChute(ch);
   }
   // 착지 찌그러짐
   if(cv.squash>0){ cv.squash=Math.max(0,cv.squash-dt*4); const s=cv.squash; grp.scale.set(S*(1+s*.25),S*(1-s*.3),S*(1+s*.25)); }
