@@ -2,7 +2,7 @@
    코브 몰 주문 — 상품 창(즉시구매 · 장바구니 담기) · 장바구니 · 주문/결제 화면
    - 코브 몰에서 오린 키링 사진이나 '자세히 · 구매'를 누르면 상품 창(<dialog id=pdDlg>): 색상 · 캐릭터 선택(그 키링의 종류, 사진 칸) · 수량 → 장바구니 담기 / 즉시구매
      (왼쪽 큰 사진 아래 사진 몇 장 · 상품 소개 — 길어지면 창이 스크롤되고 오른쪽 고르기 · 구매 칸은 크기 그대로 위에 붙어 있음, 그 칸 맨 밑 리뷰는 한 장씩 1.5초 동안 넘어가고 2초 쉼)
-   - 즉시구매 = 그 상품만, 코브 몰 위 '🛒 장바구니' = 담아 둔 상품 전부로 주문/결제 화면(#checkout)을 엶
+   - 즉시구매 = 그 상품만, 코브 몰 위 '🛒 장바구니' · 위 메뉴 장바구니 = 담아 둔 상품 전부로 주문/결제 화면(#checkout)을 엶
      (네이버 주문서처럼 왼쪽 주문 상품 · 배송지 · 할인 · 결제 수단, 오른쪽 최종 결제 금액. 맨 위 '내 가방'은 mall.js가 #checkoutBag에 그림)
    - 금액은 checkout-rules.js quote() · shippingFor()로 계산 — 실제 결제 때는 결제 서버가 같은 파일과 서버 가격표로 다시 계산
    - 지금은 결제가 열리지 않아 '결제하기'는 안내만 하고 금화도 그대로. 배송지도 받지 않음(카카오 로그인 · 개인정보 처리방침 전에는 이름·연락처·주소 X)
@@ -59,7 +59,12 @@ function saveCart(){
   paintCartN();
 }
 const cartCount=()=>cart.reduce((n,x)=>n+x.qty,0);
-function paintCartN(){ document.querySelectorAll('[data-cart-n]').forEach(b=>{ b.textContent=cartCount(); }); }
+function paintCartN(){
+  const n=cartCount();
+  const t=n.toLocaleString('ko-KR');   // 20종류 × 99개라 1,980까지 커짐
+  document.querySelectorAll('[data-cart-n]').forEach(b=>{ b.textContent=t; });
+  document.querySelectorAll('.nav-cart').forEach(b=>{ b.classList.toggle('empty',!n); b.setAttribute('aria-label',n?`장바구니 · ${t}개 담김`:'장바구니'); });   // 위 메뉴 장바구니: 비면 숫자 없이 아이콘만
+}
 if(goneN) saveCart();   // 빠진 줄을 저장소에서도 지움 (다음에 또 알리지 않게) — cartCount · paintCartN 선언 뒤에 (앞이면 TDZ 오류로 이 파일 전체가 멈춤)
 function addToCart(id,qty){
   const p=byId(id), have=cart.find(x=>x.id===id);
@@ -297,11 +302,16 @@ if(rvTrack){
 // 창 안 내용을 한 종류로 — 처음 열 때와 색상 · 캐릭터를 고를 때 같이 씀 (수량은 그대로 둠)
 function fillPd(p){
   pdId=p.id;
-  const img=$d('#pdImg'); img.onerror=()=>{ img.onerror=null; img.src=p.img; }; img.src=p.img.replace(/\.webp$/,'-l.webp'); img.alt=p.name+' 사진';   // 창은 크게 보이니 고해상도 사본(-l), 없으면 원래 사진
+  const img=$d('#pdImg'); img.alt=p.name+' 사진';
+  img.onload=()=>img.classList.remove('wait');
+  img.onerror=()=>{ img.onerror=()=>img.classList.remove('wait'); img.src=p.img; };   // 고해상도 사본이 없으면 원래 사진, 그것도 없으면 숨김을 풀어 대체 글이라도
+  img.classList.remove('swap'); img.classList.add('wait'); img.src=p.img.replace(/\.webp$/,'-l.webp');   // 창은 크게 보이니 고해상도 사본(-l) — 처음 받는 사진이면 오는 동안 숨김 (브라우저는 새 사진이 올 때까지 옛 사진을 그대로 보여 줘서 'B 이름 + A 사진'이 됨) · 지난 톡(.swap)은 뗌 (닫았다 열면 처음부터 다시 돌며 .25로 옛 사진을 비춤)
+  if(img.complete&&img.naturalWidth) img.classList.remove('wait');   // 이미 받은 사진(진열대 2배 · 1.5배 카드, 전에 연 키링)은 바로
   const paper=$d('.kr-paper'); paper.style.background=p.paper; if(A.tornClip) paper.style.clipPath=A.tornClip(17+SELL.findIndex(x=>x.id===p.base)*131,4,4);   // 찢은 모양은 상품마다, 색은 종류마다
   $d('#pdName').textContent=p.name;
   $d('#pdDesc').textContent=p.desc;
   $d('#pdPrice').textContent=p.price.toLocaleString('ko-KR');
+  const b=SELL.find(x=>x.id===p.base)||p; $d('.pd-soon').textContent=b.sample?'예시 상품 · 예시 가격':'오픈 준비 중 · 예시 가격'; $d('[data-pd-share]').hidden=!!b.sample;   // 남의 사진으로 만든 예시 상품은 공유 링크로 퍼지지 않게
   paintOpts(p);
   paintMore(p);
   paintGosi(p);
@@ -315,7 +325,7 @@ function openProduct(id){
   fillPd(p);
   const n=R.coupons(W.get('coin'));
   $d('#pdCoupon').textContent=n?`금화 쿠폰 ${n}장 있음 · 키링 1개당 ${R.COUPON_WON}원 할인`:`금화 ${R.COUPON_COINS}개를 모으면 키링 1개 ${R.COUPON_WON}원 할인`;
-  $d('#pdShip').textContent=`${won(R.SHIP_FEE)} · 상품 ${won(R.SHIP_FREE)} 이상이면 무료`;
+  $d('#pdShip').textContent=`${won(R.SHIP_FEE)} · 상품 ${won(R.SHIP_FREE)} 이상이면 무료 (예시)`;
   if(!dlg.showModal){ goCheckout('now',[{id,qty:1}]); return; }   // <dialog>를 모르는 옛 브라우저(iOS 15.3 이하) → 창 대신 바로 주문서로 (살 길이 막히지 않게)
   const g=$d('.pd-gosi'); if(g) g.open=false;   // 다른 상품을 열면 고시 표는 접힌 채로 (종류만 바꿀 땐 그대로 — fillPd)
   if(!dlg.open) dlg.showModal();
@@ -336,7 +346,17 @@ function closePd(){ if(dlg&&dlg.open) dlg.close(); }
 /* 상품 창 맨 위로 (button.go-top = 아래 화면 맨 위로와 같은 단추, 자리는 style.css .pd .go-top): 창을 맨 위에서 조금이라도 내리면 나타나고, 누르면 맨 위로 굴러감(screens.js covvRollTop)
    휴대폰 · 좁은 창은 창 전체가 스크롤 · 넓은 화면은 사진 칸 쪽(창)이 스크롤 — 정보 칸(.pd-info)은 따로 스크롤되는 짧은 칸이라 안 셈 */
 const pdTop=dlg&&dlg.querySelector('[data-pd-top]');
-function paintPdTop(){ if(pdTop) pdTop.classList.toggle('show',dlg.scrollTop>0); }
+const jumps=dlg?[...dlg.querySelectorAll('[data-pd-jump]')]:[], PD_JUMP={info:'.pd-info',review:'.pd-review',more:'.pd-more'};   // 휴대폰 상품 창 구역 길잡이 (covv.html .pd-jump) — 화면에서 위 → 아래 순서
+function paintPdTop(){
+  const bar=jumps.length?jumps[0].parentElement:null, h=bar?bar.offsetHeight:0, down=dlg.scrollTop>0;   // 읽기를 먼저, 쓰기를 나중에 (스크롤마다 불림 — 쓰고 나서 읽으면 레이아웃을 다시 셈)
+  let now='info';   // 넓은 화면(띠가 숨겨져 높이 0)은 '상품'으로 되돌려 둠 → 창 크기를 줄이거나 휴대폰을 돌려 띠가 나와도 지난 구역이 분홍으로 남지 않게
+  if(h){
+    const y=dlg.getBoundingClientRect().top+h+16;   // 띠 바로 아래를 지난 마지막 구역 = 지금 보는 구역 (맨 위 큰 사진일 땐 '상품') · +16 = 누른 구역이 멈추는 자리(.pd scroll-padding-top 72 = 띠 60 + 12)보다 아래까지 봐야 그 단추가 분홍
+    for(const k in PD_JUMP){ const t=$d(PD_JUMP[k]); if(t&&t.getBoundingClientRect().top<=y) now=k; }
+  }
+  if(pdTop) pdTop.classList.toggle('show',down);
+  jumps.forEach(b=>{ const v=String(b.dataset.pdJump===now); if(b.getAttribute('aria-current')!==v) b.setAttribute('aria-current',v); });   // 바뀐 단추만 씀
+}
 if(dlg){
   dlg.addEventListener('scroll',paintPdTop,{passive:true});
   const bar=$d('.pd-buybar');   // 휴대폰은 아래에 붙는 구매 띠 위에 맨 위로 단추를 둠 → 띠 높이(글자 줄 수 · 아이폰 아래 여백에 따라 다름)를 --pd-bar로
@@ -352,13 +372,21 @@ if(dlg){
     e.stopImmediatePropagation(); history.forward(); pdFwd=setTimeout(()=>{ pdFwd=0; },1000);   // 앞 기록이 없어 popstate가 안 오면 1초 뒤 풀림 (다음 뒤로 가기를 잘못 삼키지 않게)
   });
   dlg.addEventListener('click',e=>{
+    const j=e.target.closest('[data-pd-jump]');
+    if(j){   // 구역 길잡이 → 그 구역 머리로 (띠 높이는 .pd scroll-padding-top) · 분홍 표시는 스크롤(paintPdTop)이 바꿈 · 동작 줄이기면 바로 (mall.js 자주 묻는 질문 이동과 같음)
+      const t=$d(PD_JUMP[j.dataset.pdJump]); if(!t) return;
+      if(window.covvRollTop) window.covvRollTop(null);   // 맨 위로 굴러가던 중이면 멈춤 (안 멈추면 누른 구역으로 가다가 맨 위로 끌려감)
+      t.scrollIntoView({block:'start',behavior:RM.matches?'auto':'smooth'});
+      if(!t.hasAttribute('tabindex')) t.tabIndex=-1; t.focus({preventScroll:true});   // 포커스도 그 구역으로 → 키보드 · 화면낭독기가 거기서 이어 읽음 (처음 누를 때만 tabindex — 넓은 화면은 길잡이가 없어 그대로)
+      return;
+    }
     if(e.target.closest('[data-pd-close]')){ closePd(); return; }   // ✕를 눌러야만 닫힘 — 바깥(배경)을 눌러도 안 닫힘 (주인님 11-10: 회원가입 창과 같게)
     if(e.target.closest('[data-pd-top]')){ if(window.covvRollTop) window.covvRollTop(dlg); else dlg.scrollTop=0; $d('[data-pd-close]').focus({preventScroll:true}); return; }   // 단추가 사라지면 포커스가 창 밖으로 빠짐 → 창 첫 단추(✕)로
     const tp=e.target.closest('[data-tip]'); if(tp){ openTip(tp.dataset.tip); return; }   // 혜택 줄의 ⓘ → 안내 창
     if(e.target.closest('[data-pd-share]')){ sharePd(); return; }   // 가격 옆 🔗 공유
     if(e.target.closest('[data-rv-write]')){ openWrite(); return; }   // 리뷰 '리뷰 쓰기'
     const o=e.target.closest('[data-pd-opt]');
-    if(o){ const p=byId(o.dataset.pdOpt); if(p&&p.id!==pdId){ fillPd(p); const img=$d('#pdImg'); img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap'); } return; }   // 종류가 바뀐 걸 알게 사진이 살짝 톡
+    if(o){ const p=byId(o.dataset.pdOpt); if(p&&p.id!==pdId){ fillPd(p); const img=$d('#pdImg'); if(!img.classList.contains('wait')){ img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap'); } } return; }   // 종류가 바뀐 걸 알게 사진이 살짝 톡 (받는 중이면 오면서 페이드로 대신 — 톡(.25에서 시작)이 옛 사진을 비추지 않게)
     const rv=e.target.closest('[data-rv]'); if(rv){ rvStep(Number(rv.dataset.rv)); return; }   // 리뷰 ‹ ›
     const pl=e.target.closest('[data-rv-play]'); if(pl){ rvUser=!rvUser; pl.setAttribute('aria-pressed',String(rvUser)); rvSched(); return; }   // 리뷰 ⏸ ↔ ▶ (눌림 = 멈춤)
     const q=e.target.closest('[data-qty]');
@@ -426,7 +454,7 @@ const shareUrl=id=>location.origin+location.pathname+'?k='+encodeURIComponent(id
   if(!k) return;
   const drop=()=>{ try{ const u=new URL(location.href); u.searchParams.delete('k'); history.replaceState(history.state,'',u.pathname+u.search+u.hash); }catch(e){} };
   const p=SELL.find(x=>x.id===k);
-  if(!p||location.hash!=='#mall'){ drop(); return; }   // 모르는 상품 · #mall 없는 주소(?k=tiger#about 등)는 열지 않음
+  if(!p||p.sample||location.hash!=='#mall'){ drop(); return; }   // 모르는 상품 · 예시 상품 · #mall 없는 주소는 열지 않음
   const on=e=>{ if(e.detail!=='mall') return; removeEventListener('covv-screen',on); drop(); setTimeout(()=>openProduct(p.id),0); };   // 코브 몰 화면이 열린 뒤 (screens.js가 #mall을 열며 보냄) — 같은 이벤트의 '화면이 바뀌면 상품 창 닫기'(아래)가 먼저 끝나게 한 박자 뒤
   addEventListener('covv-screen',on);
 })();
@@ -434,7 +462,7 @@ async function sharePd(){
   const p=byId(pdId); if(!p) return;
   const base=SELL.find(x=>x.id===p.base)||p, url=shareUrl(base.id), box=$d('[data-pd-share-box]');
   if(navigator.share&&matchMedia('(pointer: coarse)').matches){
-    try{ await navigator.share({title:`${base.name} · 코브 몰`,text:'들판에서 놀고, 키링으로 데려가요',url}); return; }
+    try{ await navigator.share({title:`${base.name} · 코브 몰`,text:`${base.name} · 코브 몰`,url}); return; }   // 안드로이드 · 카톡은 title을 버리고 text+url만 보여서 이름을 text에도 (미리보기 카드는 og:image의 가게 그림이라 어떤 키링인지 안 보임)
     catch(e){ if(e&&e.name==='AbortError') return; }   // 손님이 공유 창을 닫음 → 아무것도 안 함 (다른 실패면 아래 복사로)
   }
   try{
@@ -565,7 +593,7 @@ if(rwDlg&&rwForm){
     const p=byId(pdId); if(!p) return;
     if(rwBusy){ $w('#rwErr').textContent='사진을 줄이는 중이에요 · 잠시 뒤에 눌러 주세요'; return; }
     const text=$w('#rwText').value.trim();
-    if(text.length<RW_MIN){ $w('#rwErr').textContent=`리뷰는 ${RW_MIN}자 이상 적어 주세요 (지금 ${text.length}자)`; $w('#rwText').focus(); return; }
+    if(text.length<RW_MIN){ $w('#rwErr').textContent=`리뷰는 ${RW_MIN}자 이상 적어 주세요 (지금 ${text.length}자)`; if(matchMedia('(pointer: fine)').matches) $w('#rwText').focus(); return; }   // 휴대폰은 글 칸으로 옮기면 키보드가 다시 올라와 단추 줄 바로 위 오류 문구를 덮음 → 그대로 둠 (화면낭독기는 role=alert로 읽음 · mall.js qFocus와 같은 구별)
     const pick=nm=>(rwForm.querySelector(`[name="${nm}"]:checked`)||{}).value||'', k=byId($w('#rwSku').value);
     const had=reviews[p.base], rec={star:Math.max(1,Math.min(5,Number(pick('star'))||5)), sku:k&&k.base===p.base?k.id:p.base, size:pick('size'), quality:pick('quality'), text:text.slice(0,RW_MAX), day:W.today(), photos:rwPhotos.slice(0,RW_PHOTOS)};
     reviews[p.base]=rec;
@@ -587,7 +615,7 @@ addEventListener('storage',e=>{
   else if(dlg&&dlg.open) paintReviews();
 });
 
-// 코브 몰: 오린 사진 · '자세히 · 구매' → 상품 창, '🛒 장바구니' → 주문서 (상품 창 안의 '장바구니 보기'도)
+// 코브 몰: 오린 사진 · '자세히 · 구매' → 상품 창, '🛒 장바구니' · 위 메뉴 장바구니 → 주문서 (상품 창 안의 '장바구니 보기'도)
 document.addEventListener('click',e=>{
   const o=e.target.closest('[data-open]');
   if(o){ const k=o.closest('.kr[data-p]'); if(k&&byId(k.dataset.p)){ openProduct(k.dataset.p); return; } }

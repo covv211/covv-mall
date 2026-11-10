@@ -495,7 +495,7 @@ const slider={tex:null,mesh:null,k:0,t:0,edge:0};   // 가판대 앞면 슬라�
   };
   draw();
   const tex=new THREE.CanvasTexture(c); tex.encoding=THREE.sRGBEncoding;
-  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ draw(); tex.needsUpdate=true; });
+  if(document.fonts&&document.fonts.load) document.fonts.load('700 58px Gaegu','코브 몰').then(()=>{ draw(); tex.needsUpdate=true; },()=>{});   // 간판 글자 묶음만 콕 집어 요청 — fonts.ready는 받는 중인 글꼴이 다 끝나야 풀리고, 캔버스에 쓰는 것만으로는 그 묶음을 받는다는 보장이 없음
   const face=new THREE.MeshStandardMaterial({map:tex,roughness:.9});
   const board=new THREE.Mesh(new THREE.BoxGeometry(1.6,.6,.08),[SWD,SWD,SWD,SWD,face,SWD]); board.position.set(0,2.95,-.72); g.add(board);
   g.rotation.y=STALL.ry; add(g,STALL.x,STALL.z);
@@ -583,7 +583,7 @@ bench(7.9,-3.4,-0.9); bench(-12.4,5,0.6); bench(4.2,17.4,2.8);
   };
   draw();
   const tex=new THREE.CanvasTexture(c); tex.encoding=THREE.sRGBEncoding;
-  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ draw(); tex.needsUpdate=true; });
+  if(document.fonts&&document.fonts.load) document.fonts.load('700 60px Gaegu',"코브's").then(()=>{ draw(); tex.needsUpdate=true; },()=>{});   // 위 간판처럼 푯말 글자 묶음만 요청
   const s=new THREE.Group();
   const post=new THREE.Mesh(new THREE.BoxGeometry(.16,1.6,.16),WOOD_D); post.position.y=.8; s.add(post);
   const face=new THREE.MeshStandardMaterial({map:tex,roughness:.9});

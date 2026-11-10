@@ -3,7 +3,8 @@
    - 코브 몰 화면 맨 위 #heroFilm에 그림. 아래 막대: 멈춤/재생 · 진행 줄 · '키링 보러 가기'(제품으로 내려감)
    - render(t)는 시간 t(0~60초)만 보고 그리는 순수 함수 → 멈췄다 이어 봐도 같은 화면, 끝 → 처음도 도화지 찢기로 이어짐
    - 대본 7장면 = 종이 8장(SHEETS, ⑤는 가게/진열대 두 장). 바뀔 때 나가는 화면을 버퍼에 그려 찢김선으로 위·아래로 벌림
-   - 코브 몰 화면이 열려 있고 · 화면에 보이고 · 탭이 보일 때만 돌림(30fps · 해상도 상한) → 그래픽 카드 발열 줄임
+   - 코브 몰 화면이 열려 있고 · 화면에 보이고 · 탭이 보이고 · 위에 창(상품 · 안내 · 회원가입)이 없을 때만 돌림(30fps · 해상도 상한) → 그래픽 카드 발열 줄임
+   - 글꼴(함렛 · IBM Plex Mono)은 코브 몰을 처음 열 때 요청 (들판만 보는 손님은 안 받음)
    - 시안은 기획서 artifact '코브 몰 히어로 필름'(시안 2). 확정되면 힉스필드 영상으로 바꿀 자리(자막·쿠폰 글자·찢기 전환은 코드 합성)
    - mall.js 다음, screens.js 전에 불러옴 (주소가 #mall이면 screens.js가 바로 열면서 보내는 covv-screen을 받아야 함)
    ══════════════════════════════════════════════════════════ */
@@ -1088,7 +1089,8 @@ function render(t){
 
 /* ══════════ 재생 ══════════ */
 let T=0, userPaused=false, mallOpen=false, inView=true, raf=0, lastNow=0, ready=false, shownP=-1;
-const running=()=>!userPaused&&mallOpen&&inView&&!document.hidden;
+const modalOpen=()=>!!document.querySelector('dialog[open]');   // 상품 창 · 안내 창 · 리뷰 쓰기 · 회원가입 창이 덮고 있으면 (휴대폰은 창이 화면을 거의 다 가려 그려도 안 보임 — IntersectionObserver는 덮인 걸 모름)
+const running=()=>!userPaused&&mallOpen&&inView&&!document.hidden&&!modalOpen();
 function resize(){   // 코브 몰이 닫혀 있으면(display:none) 폭이 0 → 열릴 때 다시 잼
   const cssW=cv.clientWidth; if(!cssW) return;
   const vis=W*cv.clientHeight/cssW, crop=vis<H?(H-vis)/2:0;   // 높이 800px · object-fit: cover → 가운데 기준으로 위아래가 똑같이 잘림
@@ -1134,21 +1136,25 @@ function setPaused(v){
   if(playBtn){ playBtn.textContent=v?'▶':'❚❚'; playBtn.setAttribute('aria-label',v?'광고 재생':'광고 멈추기'); }
   kick();
 }
+/* 글꼴: 한글은 글자 묶음별로 나눠 받으니 화면에 쓰는 글자를 미리 요청 → 오면 다시 그림
+   코브 몰을 처음 열 때 한 번만 — 페이지를 열자마자 부르면 들판만 보고 가는 손님도 함렛 9묶음 · IBM Plex Mono 2묶음(약 420KB)을 받음 (들판 간판은 field.js가 자기 글자 묶음만 fonts.load로 따로 요청) */
+const ALL='의오늘도들판에코브가놀러왔어요터트리고,줍고금화100개=쿠폰1장키링원할인손으로고른마음에들면하트사탕내색을무지개는비밀서놀고데려가지금오픈준비중·구경언제나환영몰분홍민트레몬하늘라벤더0123456789COVVMALLCOUPONFIELDARRIVALCOLLECTSHELFNEWPINKMINTLEMONSKYSECRETIRIDESCENTNo.?×';
+let fontAsked=false;
+function askFonts(){
+  if(fontAsked||!document.fonts||!document.fonts.load) return;
+  fontAsked=true;
+  Promise.all([`800 250px ${SERIF}`,`700 116px ${SERIF}`,`600 66px ${SERIF}`,`500 40px ${SERIF}`,`500 24px ${SANS}`,`500 18px ${MONO}`,`600 18px ${MONO}`].map(f=>document.fonts.load(f,ALL).catch(()=>{}))).then(()=>{ fontVer++; if(ready) buildLayers(); draw(); });   // 레이어 속 글자(장부 · 칠판 · 푯말)도 다시
+}
 
 if(playBtn) playBtn.addEventListener('click',()=>setPaused(!userPaused));
 cv.addEventListener('click',()=>setPaused(!userPaused));
 if(shopBtn) shopBtn.addEventListener('click',()=>{ const to=box.nextElementSibling; if(to) to.scrollIntoView({behavior:REDUCED?'auto':'smooth',block:'start'}); });   // 히어로 다음(코브 몰 제목)으로 — 주소(#)를 바꾸면 screens.js가 화면을 닫으니 스크롤만
-addEventListener('covv-screen',e=>{ mallOpen=e.detail==='mall'; if(mallOpen){ resize(); draw(); } navOverHero(); kick(); });
+addEventListener('covv-screen',e=>{ mallOpen=e.detail==='mall'; if(mallOpen){ askFonts(); resize(); draw(); } navOverHero(); kick(); });
 if(scr) scr.addEventListener('scroll',navOverHero,{passive:true});
 document.addEventListener('visibilitychange',kick);
+document.addEventListener('close',kick,true);   // <dialog>의 close는 버블링하지 않아서 캡처로 받음(mall.js 토스트와 같음) → 창을 다 닫으면 멈춘 자리부터 이어서
 if('IntersectionObserver' in window) new IntersectionObserver(es=>{ inView=es[0].isIntersecting; kick(); },{threshold:.15}).observe(cv);
 if('ResizeObserver' in window) new ResizeObserver(()=>{ if(mallOpen){ resize(); navOverHero(); } }).observe(cv); else addEventListener('resize',()=>{ if(mallOpen){ resize(); navOverHero(); } });
-
-/* 글꼴: 한글은 글자 묶음별로 나눠 받으니 화면에 쓰는 글자를 미리 요청 → 오면 다시 그림 */
-const ALL='의오늘도들판에코브가놀러왔어요터트리고,줍고금화100개=쿠폰1장키링원할인손으로고른마음에들면하트사탕내색을무지개는비밀서놀고데려가지금오픈준비중·구경언제나환영몰분홍민트레몬하늘라벤더0123456789COVVMALLCOUPONFIELDARRIVALCOLLECTSHELFNEWPINKMINTLEMONSKYSECRETIRIDESCENTNo.?×';
-if(document.fonts&&document.fonts.load){
-  Promise.all([`800 250px ${SERIF}`,`700 116px ${SERIF}`,`600 66px ${SERIF}`,`500 40px ${SERIF}`,`500 24px ${SANS}`,`500 18px ${MONO}`,`600 18px ${MONO}`].map(f=>document.fonts.load(f,ALL).catch(()=>{}))).then(()=>{ fontVer++; if(ready) buildLayers(); draw(); });   // 레이어 속 글자(장부 · 칠판 · 푯말)도 다시
-}
 
 window._hero={ seek:t=>{ T=((t%DUR)+DUR)%DUR; resize(); draw(); }, step:sec=>{ T=(T+sec)%DUR; draw(); }, get t(){ return T; }, pause:()=>setPaused(true) };   // 디버그 · 숨은 미리보기 창 검증용 (rAF가 멈춰도 시간 흘리기)
 })();

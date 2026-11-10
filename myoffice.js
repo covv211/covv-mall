@@ -193,7 +193,7 @@ acct.innerHTML=`
       </div>
     </section>
   </div>
-  <p class="fine">이름·연락처·배송지 같은 개인정보는 가게가 열리고 로그인할 때 개인정보처리방침과 함께 받을게요. 지금은 개인정보를 하나도 모으지 않아요.</p>`;
+  <p class="fine acct-note">이름·연락처·배송지 같은 개인정보는 가게가 열리고 로그인할 때 개인정보 처리방침과 함께 받을게요. 지금은 이름·연락처·주소를 받지 않고, 방문자 수와 서버 보안을 위해 접속 IP 같은 접속 기록을 남겨요 (<a href="privacy.html">개인정보 처리방침</a>)</p>`;
 function fillDl(dl,rows){
   dl.innerHTML='';
   for(const [k,v] of rows){ const d=el('div'); d.appendChild(el('dt',null,k)); d.appendChild(el('dd',null,v)); dl.appendChild(d); }
@@ -265,7 +265,7 @@ function paintAccount(){
   fillDl(acct.querySelector('[data-acct-shop]'),[
     ['보유 금화',W.short(c)+'개'],
     ['할인 쿠폰',n?`${n}장 · 키링 ${n}개 ${W.COUPON_WON}원씩`:`없음 · 금화 ${Math.max(0,W.COUPON_COINS-c)}개 더`],
-    ['한정판 먼저 사기',A&&gem>=A.GEM_EARLY?'있어요 💎':`보석 ${gem} / ${A?A.GEM_EARLY:3}`],
+    ['한정판 먼저 사기',A&&gem>=A.GEM_EARLY?'있어요 💎 (한정판 준비 중)':`보석 ${gem} / ${A?A.GEM_EARLY:3}`],
     ['주문 내역','아직 없어요'],
     ['배송지','로그인 후 등록'],
   ]);
@@ -475,7 +475,7 @@ if(dlg){
   document.getElementById('joinForm').addEventListener('submit',e=>{
     e.preventDefault();
     const btn=e.target.querySelector('[type="submit"]'); if(btn.disabled) return;
-    const fail=code=>{ joinErr.textContent=ACCT_ERR[code]||'다시 적어 주세요'; errFocus(code,{id:joinId,nick:joinNick,pw:joinPw,pw2:joinPw2}).focus(); };
+    const fail=code=>{ joinErr.textContent=ACCT_ERR[code]||'다시 적어 주세요'; if(matchMedia('(pointer: fine)').matches) errFocus(code,{id:joinId,nick:joinNick,pw:joinPw,pw2:joinPw2}).focus(); };   // 휴대폰은 칸으로 옮기면 키보드가 올라와 맨 아래 오류 문구(누른 가입 단추 바로 위)가 가려짐 → 오류만 보여 줌 (마우스 · 키보드는 그 칸으로)
     // 해시를 만들기 전에 바로 알 수 있는 오류부터 (칸 순서대로: 아이디 → 비밀번호 → 한 번 더 → 닉네임)
     const d=W.checkId(joinId.value); if(!d.ok){ fail(d.error); return; }
     const c=W.checkNick(joinNick.value);
@@ -539,10 +539,23 @@ if(loginDlg){
   });
   closable(loginDlg);
 }
+// 아이폰 밀어서 뒤로 · 브라우저 뒤로 단추 = popstate → screens.js(나중에 불러옴)가 뒤 화면을 바꾸기 전에 멈추고 주소만 앞으로 되돌림 (checkout.js 상품 창과 같은 방식 · 상품 창 위에 겹쳐 떠 있으면 checkout.js가 먼저 받아 삼킴)
+let acctFwd=0;
+addEventListener('popstate',e=>{
+  if(acctFwd){ clearTimeout(acctFwd); acctFwd=0; e.stopImmediatePropagation(); return; }   // 아래 forward()로 돌아온 것 = 원래 자리
+  if(!(dlg&&dlg.open)&&!(loginDlg&&loginDlg.open)) return;
+  e.stopImmediatePropagation(); history.forward(); acctFwd=setTimeout(()=>{ acctFwd=0; },1000);   // 앞 기록이 없어 popstate가 안 오면 1초 뒤 풀림 (다음 뒤로 가기를 잘못 삼키지 않게)
+});
+// Esc는 창만 닫음 — 창이 아니라 window 캡처에서 받음: '확인 중…'으로 단추가 꺼지거나 창 안 글자를 눌러 포커스가 body로 빠져도 (아래 cancel 막기 때문에 브라우저도 안 닫아 줌)
+// checkout.js 상품 창 · screens.js 화면 닫기보다 먼저 → 막아 두면(defaultPrevented) 뒤의 상품 창 · 화면은 그대로
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape'||e.isComposing) return;
+  const d=[dlg,loginDlg].find(x=>x&&x.open); if(!d) return;
+  e.preventDefault(); d.close();
+},true);
 function closable(d){
   d.addEventListener('click',e=>{ if(e.target.closest('[data-join-close]')) d.close(); });   // ✕를 눌러야만 닫힘 — 바깥(배경 · 뒤의 들판)을 눌러도 안 닫힘 (주인님 11-10: 쓰던 아이디 · 비밀번호가 실수로 날아가지 않게)
-  // Esc는 창만 닫음 (screens.js가 뒤에 열린 화면까지 닫지 않게 기본 동작을 막고 직접 닫음)
-  d.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!e.isComposing){ e.preventDefault(); d.close(); } });
+  d.addEventListener('cancel',e=>e.preventDefault());   // 휴대폰 뒤로 가기로도 안 닫힘 (✕로만) — 안드로이드 뒤로 몸짓 = 창의 cancel → 막음 (Esc는 위 window 캡처 keydown이 먼저 막고 직접 닫음 ·크롬은 사이에 아무것도 안 누르고 뒤로를 또 하면 못 막게 해 둠 → 그때는 닫힘, 상품 창과 같음)
 }
 function paintNav(){
   if(!navAcct) return;

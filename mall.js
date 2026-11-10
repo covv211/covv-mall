@@ -358,7 +358,8 @@ toast.lift=()=>{ if(!toastEl||!toastEl.classList.contains('show')) return; const
 if(!raw.gift){
   state.gift=true; wallet.add('heart',3); wallet.add('star',1);
   wallet.log('🎁 첫 방문 선물로 하트 3개와 별 1개를 받았어요');
-  setTimeout(()=>toast('🎁 첫 방문 선물! 하트 3개와 별 1개를 가방에 넣어 드렸어요'),3200);
+  const appHi=navigator.standalone===true;   // 아이폰 홈 화면 앱 — 사파리와 저장소가 따로라 처음 열면 늘 새 가방(=이 선물 블록) → 같은 알림에 붙여 한 번만 알려 줌
+  setTimeout(()=>toast(appHi?'🎁 첫 방문 선물! 하트 3개와 별 1개를 넣어 드렸어요 · 홈 화면 앱은 사파리와 따로 저장돼서 금화는 여기서 새로 모아요':'🎁 첫 방문 선물! 하트 3개와 별 1개를 가방에 넣어 드렸어요'),3200);
 }
 
 /* ── 가방 숫자 표시: 아이템은 최대 9,999개라 그대로 1,234처럼 (자르는 건 get()이 함) ── */
@@ -379,7 +380,7 @@ const RULES=[
   `쓴 쿠폰만큼의 금화는 <b>결제가 끝난 뒤에</b> 빠져요. 결제를 그만두거나 실패하면 금화는 그대로예요.`,
   `배송비는 할인되지 않아요. ${R.COUPON_MIN_PRICE.toLocaleString('ko-KR')}원보다 싼 상품도 할인에서 빠져요.`,
   `반품하면 할인받은 금액을 뺀 만큼 환불되고, 쓴 금화는 돌아오지 않아요.`,
-  `금화는 <b>이 브라우저에만</b> 저장돼요. 인터넷 사용 기록을 지우면 사라지고, 다른 기기나 브라우저에서는 보이지 않아요. 사파리(아이폰·아이패드·맥)는 7일 넘게 들르지 않으면 지워질 수도 있어요. <b>사라진 금화는 복구해 드릴 수 없어요.</b>`,
+  `금화는 <b>이 브라우저에만</b> 저장돼요. 인터넷 사용 기록을 지우면 사라지고, 다른 기기나 브라우저에서는 보이지 않아요. 아이폰·아이패드 홈 화면에 추가해 주소창 없이 여는 코브 몰도 사파리와 따로예요. 사파리(아이폰·아이패드·맥)는 7일 넘게 들르지 않으면 지워질 수도 있어요. <b>사라진 금화는 복구해 드릴 수 없어요.</b>`,
   `금화는 돈으로 바꾸거나 다른 사람에게 줄 수 없어요.`,
   `할인 규칙은 가게가 열리기 전에 바뀔 수 있어요.`,
 ];
@@ -398,6 +399,7 @@ function paintHud(k){
       if(k===n){ el.parentElement.classList.remove('bump'); void el.parentElement.offsetWidth; el.parentElement.classList.add('bump'); }
     }
   }
+  if(hud){ const l=`내 가방 · 금화 ${short(wallet.get('coin'))}개 · 하트 ${short(wallet.get('heart'))}개 · 별 ${short(wallet.get('star'))}개 · 코브 몰 열기`; if(hud.getAttribute('aria-label')!==l) hud.setAttribute('aria-label',l); }   // 화면낭독기도 숫자를 읽게 (aria-label이 안의 숫자를 가림) · 보이는 숫자가 이름에 들어가 음성 조작도 맞음 · 같으면 다시 쓰지 않음 (주울 때마다 불림)
 }
 paintHud();
 wallet.on(paintHud);
@@ -502,33 +504,34 @@ function coveSVG(color,variant,opts={}){   // opts.plain: 고리·아크릴 테�
 }
 
 /* ══════════ 코브 몰 화면 ══════════ */
-// 진열대: 한정판(그린 코브, 들판 무지개 코브와 이어짐)은 맨 위 카드, 나머지는 배경 지운 키링 사진(images/stall 300×300)을 종이로 오려 붙인 모양
-// (지금 사진 20장 중 비숑 아크릴(keyring-21, 2026-11-09 주인님 사진) 말고는 테스트용 남의 상품 → 공개 전 실제 상품 사진·이름으로 바꿀 것. 하트 기록은 id로 남으니 id는 상품마다 새로. 들판 가판대는 앞 5장만 field.js에 따로)
+// 진열대: 배경 지운 키링 사진(images/stall 300×300)을 종이로 오려 붙인 모양 — 한정판 무지개(img 없음)는 10-05에 진열대에서 내려가 목록에만 있음(하트 기록 · 무지개 코브와 이어짐)
+// (지금 사진 21장 중 비숑 두 개(keyring-21 · 22) 말고는 테스트용 남의 상품 → 공개 전 실제 상품 사진·이름으로 바꿀 것. 하트 기록은 id로 남으니 id는 상품마다 새로. 들판 가판대는 앞 5장만 field.js에 따로)
 // 진열 순서 = '추천' 정렬. sold·reviews는 '판매량'·'리뷰 많은' 정렬에만 쓰는 예시 숫자(화면엔 안 보임, 정렬도 SHOW_STATS 전엔 미리보기에서만), day = 진열대에 올린 날 → NEW_DAYS일 안이면 'NEW' 도장 · NEW 정렬 맨 앞(tag는 '한정' 같은 다른 도장만)
 // 상품 창 큰 사진 아래: shots:['images/…'] = 사진 몇 장(차례로), story:'…' = 상품 소개 글(\n = 문단 나눔). 없으면 빈 사진 자리 · 짧은 소개(desc)만 (✏️ 직접 넣으세요, OPTIONS 종류마다 따로 줘도 됨)
+// sample: 남의 상품 사진으로 화면을 보여 주려는 예시 상품 → 진열대 '예시' 도장 · 상품 창 '예시 상품' · 공유 단추 숨김 · 키링 주소(?k=)로 안 열림 (✏️ 실제 상품으로 바꾸면 지우세요)
 const PRODUCTS=[
   {id:'rainbow',   name:'무지개 코브 키링',   color:'#ff9ccb', bg:'#fff4d6', variant:'rainbow', tag:'한정', limited:true, desc:'히든 물감을 먹고 무지개 코브가 된 사람만 살 수 있어요. 보석 3개를 모으면 출시 첫날 먼저 살 수 있어요.'},
-  {id:'beebichon', name:'꿀벌 비숑 아크릴 키링', img:'images/stall/keyring-22.webp', paper:'#ffe27a', price:14000, sold:0,   reviews:0,  day:'2026-11-10',           desc:'줄무늬 꿀벌 옷에 더듬이 · 반짝이 날개를 단 비숑. 투명 아크릴 키링.', kw:'달리 강아지 꿀벌'},
-  {id:'tiger',     name:'주황 호랑이 키링',   img:'images/stall/keyring-1.webp',  paper:'#ffb98a', price:12000, sold:132, reviews:24, day:'2026-10-2',            desc:'도넛 참을 단 주황 호랑이. 손을 흔들며 인사해요.'},
-  {id:'violet',    name:'보라 머리 소녀 키링', img:'images/stall/keyring-2.webp',  paper:'#c3a6ff', price:15000, sold:96,  reviews:41, day:'2026-10-2',            desc:'금빛 동전 참이 함께 달린 에나멜 키링.'},
-  {id:'squirrel',  name:'도토리 다람쥐 키링', img:'images/stall/keyring-3.webp',  paper:'#ffe27a', price:11000, sold:58,  reviews:12, day:'2026-10-2',            desc:'도토리와 단풍잎 참을 단 금빛 다람쥐.'},
-  {id:'dino',      name:'초록 공룡 키링',     img:'images/stall/keyring-4.webp',  paper:'#8fe3c4', price:9000,  sold:210, reviews:37, day:'2026-10-2',            desc:'볼이 발그레한 초록 공룡 아크릴 키링.'},
-  {id:'fox',       name:'무지개 여우 키링',   img:'images/stall/keyring-5.webp',  paper:'#8cc8ff', price:13000, sold:74,  reviews:33, day:'2026-10-2',            desc:'버섯·클로버 참을 단 알록달록 펠트 여우.'},
-  {id:'flower5',   name:'5잎 솜 키링',        img:'images/stall/keyring-6.webp',  paper:'#9fe0b0', price:12000, sold:88,  reviews:19, day:'2026-10-5',            desc:'폭신한 검정 꽃잎 다섯 장에 초록 받침을 댄 솜 키링.'},
-  {id:'bichon',    name:'흰 비숑 아크릴 키링', img:'images/stall/keyring-21.webp', paper:'#ffc08a', price:14000, sold:47,  reviews:15, day:'2026-11-9',            desc:'복슬복슬 흰 비숑이 앞발을 내민 투명 아크릴 키링.', kw:'달리 강아지'},
-  {id:'clover',    name:'네잎클로버 키링',    img:'images/stall/keyring-8.webp',  paper:'#c9e89a', price:9000,  sold:163, reviews:28, day:'2026-10-5',            desc:'매트한 검정 네잎클로버에 주황 가죽 태그를 달았어요.'},
-  {id:'metalkuma', name:'메탈 쿠마 키링',     img:'images/stall/keyring-9.webp',  paper:'#c9c6cf', price:15000, sold:69,  reviews:22, day:'2026-10-5',            desc:'은빛 메탈 곰과 검정 땋은 끈 고리.'},
-  {id:'blackcat',  name:'블랙캣 키링',        img:'images/stall/keyring-10.webp', paper:'#ffd9a8', price:16000, sold:121, reviews:52, day:'2026-10-5',            desc:'빨간 줄무늬 목도리를 두른 털복숭이 검은 고양이 인형.'},
-  {id:'blackkuma', name:'블랙 쿠마 키링',     img:'images/stall/keyring-11.webp', paper:'#ff9b9b', price:15000, sold:54,  reviews:9,  day:'2026-10-5',            desc:'검정 곰과 땋은 가죽 끈, 로고 태그가 함께 달려요.'},
-  {id:'bluekuma',  name:'블루스타 쿠마 키링', img:'images/stall/keyring-12.webp', paper:'#9fd3ff', price:18000, sold:38,  reviews:17, day:'2026-10-5',            desc:'파란 큐빅이 촘촘히 박힌 곰과 술 장식.'},
-  {id:'redheart',  name:'빨강 하트 키링',     img:'images/stall/keyring-13.webp', paper:'#ffb3cf', price:11000, sold:102, reviews:31, day:'2026-10-5',            desc:'빨간 하트 참과 구슬 줄, 리본을 엮은 체인 키링.'},
-  {id:'shaun',     name:'숀더쉽 키링',        img:'images/stall/keyring-14.webp', paper:'#ffe27a', price:13000, sold:85,  reviews:44, day:'2026-10-5',            desc:'복슬복슬 흰 털옷을 입은 양 인형 키링.'},
-  {id:'amulet',    name:'액운 방지 키링',     img:'images/stall/keyring-15.webp', paper:'#cfe8c4', price:12000, sold:29,  reviews:6,  day:'2026-10-5',            desc:'흰 옥과 초록 옥 매듭 장식. 나쁜 기운을 막아 준대요.'},
-  {id:'carmodel',  name:'자동차 모형 키링',   img:'images/stall/keyring-16.webp', paper:'#d6dbe6', price:10000, sold:77,  reviews:20, day:'2026-10-5',            desc:'좋아하는 차를 고르는 아크릴 자동차 키링.'},
-  {id:'carkey',    name:'자동차용 키링',      img:'images/stall/keyring-17.webp', paper:'#e3d2bd', price:9000,  sold:140, reviews:26, day:'2026-10-5',            desc:'땋은 검정 가죽 끈과 큰 고리, 자동차 키에 잘 어울려요.'},
-  {id:'dice',      name:'주사위 키링',        img:'images/stall/keyring-18.webp', paper:'#c3a6ff', price:11000, sold:63,  reviews:14, day:'2026-10-5',            desc:'8번 공과 주사위를 주렁주렁 단 체인 키링.'},
-  {id:'keycap',    name:'키보드 키링',        img:'images/stall/keyring-19.webp', paper:'#ffd1b3', price:14000, sold:91,  reviews:38, day:'2026-10-5',            desc:'고양이 키캡 다섯 개를 눌러 볼 수 있는 미니 키보드.'},
-  {id:'pinkjade',  name:'핑크 옥 키링',       img:'images/stall/keyring-20.webp', paper:'#ffc4d6', price:12000, sold:44,  reviews:11, day:'2026-10-5',            desc:'분홍 옥 고리와 흰 옥 꽃을 매듭으로 엮었어요.'},
+  {id:'beebichon', name:'꿀벌 비숑 아크릴 키링', img:'images/stall/keyring-22.webp', paper:'#ffe27a', price:14000, sold:0,   reviews:0,  day:'2026-11-10',             desc:'줄무늬 꿀벌 옷에 더듬이 · 반짝이 날개를 단 비숑. 투명 아크릴 키링.', kw:'달리 강아지 꿀벌'},
+  {id:'tiger',     name:'주황 호랑이 키링',   img:'images/stall/keyring-1.webp',  paper:'#ffb98a', price:12000, sold:132, reviews:24, day:'2026-10-2', sample:true, desc:'도넛 참을 단 주황 호랑이. 손을 흔들며 인사해요.'},
+  {id:'violet',    name:'보라 머리 소녀 키링', img:'images/stall/keyring-2.webp',  paper:'#c3a6ff', price:15000, sold:96,  reviews:41, day:'2026-10-2', sample:true, desc:'금빛 동전 참이 함께 달린 에나멜 키링.'},
+  {id:'squirrel',  name:'도토리 다람쥐 키링', img:'images/stall/keyring-3.webp',  paper:'#ffe27a', price:11000, sold:58,  reviews:12, day:'2026-10-2', sample:true, desc:'도토리와 단풍잎 참을 단 금빛 다람쥐.'},
+  {id:'dino',      name:'초록 공룡 키링',     img:'images/stall/keyring-4.webp',  paper:'#8fe3c4', price:9000,  sold:210, reviews:37, day:'2026-10-2', sample:true, desc:'볼이 발그레한 초록 공룡 아크릴 키링.'},
+  {id:'fox',       name:'무지개 여우 키링',   img:'images/stall/keyring-5.webp',  paper:'#8cc8ff', price:13000, sold:74,  reviews:33, day:'2026-10-2', sample:true, desc:'버섯·클로버 참을 단 알록달록 펠트 여우.'},
+  {id:'flower5',   name:'5잎 솜 키링',        img:'images/stall/keyring-6.webp',  paper:'#9fe0b0', price:12000, sold:88,  reviews:19, day:'2026-10-5', sample:true, desc:'폭신한 검정 꽃잎 다섯 장에 초록 받침을 댄 솜 키링.'},
+  {id:'bichon',    name:'흰 비숑 아크릴 키링', img:'images/stall/keyring-21.webp', paper:'#ffc08a', price:14000, sold:47,  reviews:15, day:'2026-11-9',              desc:'복슬복슬 흰 비숑이 앞발을 내민 투명 아크릴 키링.', kw:'달리 강아지'},
+  {id:'clover',    name:'네잎클로버 키링',    img:'images/stall/keyring-8.webp',  paper:'#c9e89a', price:9000,  sold:163, reviews:28, day:'2026-10-5', sample:true, desc:'매트한 검정 네잎클로버에 주황 가죽 태그를 달았어요.'},
+  {id:'metalkuma', name:'메탈 쿠마 키링',     img:'images/stall/keyring-9.webp',  paper:'#c9c6cf', price:15000, sold:69,  reviews:22, day:'2026-10-5', sample:true, desc:'은빛 메탈 곰과 검정 땋은 끈 고리.'},
+  {id:'blackcat',  name:'블랙캣 키링',        img:'images/stall/keyring-10.webp', paper:'#ffd9a8', price:16000, sold:121, reviews:52, day:'2026-10-5', sample:true, desc:'빨간 줄무늬 목도리를 두른 털복숭이 검은 고양이 인형.'},
+  {id:'blackkuma', name:'블랙 쿠마 키링',     img:'images/stall/keyring-11.webp', paper:'#ff9b9b', price:15000, sold:54,  reviews:9,  day:'2026-10-5', sample:true, desc:'검정 곰과 땋은 가죽 끈, 로고 태그가 함께 달려요.'},
+  {id:'bluekuma',  name:'블루스타 쿠마 키링', img:'images/stall/keyring-12.webp', paper:'#9fd3ff', price:18000, sold:38,  reviews:17, day:'2026-10-5', sample:true, desc:'파란 큐빅이 촘촘히 박힌 곰과 술 장식.'},
+  {id:'redheart',  name:'빨강 하트 키링',     img:'images/stall/keyring-13.webp', paper:'#ffb3cf', price:11000, sold:102, reviews:31, day:'2026-10-5', sample:true, desc:'빨간 하트 참과 구슬 줄, 리본을 엮은 체인 키링.'},
+  {id:'shaun',     name:'숀더쉽 키링',        img:'images/stall/keyring-14.webp', paper:'#ffe27a', price:13000, sold:85,  reviews:44, day:'2026-10-5', sample:true, desc:'복슬복슬 흰 털옷을 입은 양 인형 키링.'},
+  {id:'amulet',    name:'액운 방지 키링',     img:'images/stall/keyring-15.webp', paper:'#cfe8c4', price:12000, sold:29,  reviews:6,  day:'2026-10-5', sample:true, desc:'흰 옥과 초록 옥 매듭 장식. 나쁜 기운을 막아 준대요.'},
+  {id:'carmodel',  name:'자동차 모형 키링',   img:'images/stall/keyring-16.webp', paper:'#d6dbe6', price:10000, sold:77,  reviews:20, day:'2026-10-5', sample:true, desc:'좋아하는 차를 고르는 아크릴 자동차 키링.'},
+  {id:'carkey',    name:'자동차용 키링',      img:'images/stall/keyring-17.webp', paper:'#e3d2bd', price:9000,  sold:140, reviews:26, day:'2026-10-5', sample:true, desc:'땋은 검정 가죽 끈과 큰 고리, 자동차 키에 잘 어울려요.'},
+  {id:'dice',      name:'주사위 키링',        img:'images/stall/keyring-18.webp', paper:'#c3a6ff', price:11000, sold:63,  reviews:14, day:'2026-10-5', sample:true, desc:'8번 공과 주사위를 주렁주렁 단 체인 키링.'},
+  {id:'keycap',    name:'키보드 키링',        img:'images/stall/keyring-19.webp', paper:'#ffd1b3', price:14000, sold:91,  reviews:38, day:'2026-10-5', sample:true, desc:'고양이 키캡 다섯 개를 눌러 볼 수 있는 미니 키보드.'},
+  {id:'pinkjade',  name:'핑크 옥 키링',       img:'images/stall/keyring-20.webp', paper:'#ffc4d6', price:12000, sold:44,  reviews:11, day:'2026-10-5', sample:true, desc:'분홍 옥 고리와 흰 옥 꽃을 매듭으로 엮었어요.'},
 ];   // price·sold·reviews는 예시 (✏️ 주인님이 정하면 직접 수정) — 화면 표시·정렬용, 실제 결제 금액은 결제 서버의 가격표로 다시 계산. 가게가 열리면 sold·reviews는 서버의 실제 숫자로
 // kw: 검색에만 쓰는 별명 (화면엔 안 보임, 띄어쓰기로 나눔) — 이름 · 설명에 없는 말로도 찾히게 ('달리' → 비숑 · ✏️ 상품을 바꾸면 직접 수정하세요)
 // 상품 창 '색상 · 캐릭터 선택' 칸: 상품 id → 그 키링의 종류. 첫 줄 = 진열대에 붙은 그 상품(id 같음, 이름·색은 PRODUCTS 그대로)
@@ -576,7 +579,7 @@ const SORTS=[['pick','추천'],['low','낮은가격'],['high','높은가격'],['
 const STAT_SORTS=['review','sold'];   // 예시 숫자(sold·reviews)로 줄 세우는 정렬 — SHOW_STATS 전엔 미리보기에서만 (아직 안 팔렸는데 판매 순위처럼 보이지 않게)
 const dayDate=s=>{ const [y,m,d]=String(s||'').split('-').map(Number); return y?new Date(y,(m||1)-1,d||1):null; };   // 'YYYY-M-D' → 그날 0시
 const isNew=p=>{ const d=dayDate(p.day); return !!d&&(Date.now()-d)/864e5<NEW_DAYS; };
-const stampOf=p=>p.tag&&p.tag!=='NEW'?p.tag:isNew(p)?'NEW':'';   // 진열대 도장: '한정' 같은 tag 먼저, 아니면 올린 지 NEW_DAYS일 안이면 NEW
+const stampOf=p=>p.sample?'예시':p.tag&&p.tag!=='NEW'?p.tag:isNew(p)?'NEW':'';   // 진열대 도장: 예시 상품 먼저, 다음 '한정' 같은 tag, 아니면 올린 지 NEW_DAYS일 안이면 NEW
 const RETIRED={pink:'분홍 코브 키링',sky:'하늘 코브 키링',mint:'민트 코브 키링',lav:'라벤더 코브 키링',para:'낙하산 코브 키링',bubble:'거품 속 코브 키링',leatherdog:'가죽 강아지 키링'};   // 진열대에서 내려간 상품 이름 (하트 기록이 남아 있어 내 오피스 '응원한 키링' 목록에 씀)
 const VOTES=[
   {id:'sleepy', name:'잠꾸러기 코브', color:'#c3a6ff', variant:'sleepy', desc:'눈 감고 쿨쿨'},
@@ -633,12 +636,12 @@ bagRoot.innerHTML=`
 // ✏️ 배송 · 교환 · 반품 답은 문을 열 때 실제 정책(출고 기간 · 택배사 · 반품 배송비)으로 직접 수정하세요
 const won=n=>n.toLocaleString('ko-KR')+'원';
 const FAQ=[
-  ['지금 키링을 살 수 있어요?', `<p>아직 문을 열기 전이에요. 구경 · 장바구니 · 하트 · 투표는 지금도 되고, 결제는 코브 몰이 문을 열면 시작해요. 지금 보이는 가격 · 리뷰는 예시예요.</p>`],
+  ['지금 키링을 살 수 있어요?', `<p>아직 문을 열기 전이에요. 구경 · 장바구니 · 하트 · 투표 · 리뷰 써 보기 · 회원가입은 지금도 되고, 결제는 코브 몰이 문을 열면 시작해요. 지금 보이는 가격 · 배송비 · 리뷰는 예시예요.</p>`],
   ['금화 · 하트 · 별 · 사탕은 어디서 얻어요?', `<p>들판 땅에서 올라오는 빈 거품을 터트리면 아이템이 떨어지고, 코브가 닿으면 주워요. 거품을 직접 눌러서 터트려도 돼요. 가끔 금화 주머니 · 보석 · 무지개 물감도 나와요.</p>`, 'get'],
   ['금화로 얼마나 할인받아요?', `<p>금화 ${COUPON_COINS}개 = 쿠폰 1장 = 키링 1개 ${COUPON_WON}원 할인이에요. 자세한 규칙은 아래를 펼쳐 보세요.</p>${rulesHTML()}`],
   ['하트 선물은 뭐예요?', `<p>마음에 드는 키링을 응원하는 표시예요. 한 키링에 하루 ${DAY_HEART}개까지 줄 수 있고, 응원한 키링은 내 오피스에 모여요. 하트가 떨어지면 들판에서 더 주워 오면 돼요.</p>`],
-  ['별 · 사탕은 어디에 써요?', `<p>별은 '다음 키링 투표'에서 만들었으면 하는 후보에 걸어요(한 후보에 하루 ${DAY_STAR}개). 사탕 ${DECO_CANDY}개로는 들판을 걷는 내 코브의 색을 바꿀 수 있어요.</p>`],
-  ['금화가 사라졌어요 · 다른 기기에서 안 보여요', `<p>가방은 이 브라우저에만 저장돼요. 인터넷 사용 기록을 지우거나 사생활 보호(시크릿) 창을 쓰면 사라지고, 다른 기기 · 브라우저에서는 보이지 않아요. 사파리는 7일 넘게 들르지 않으면 지워질 수도 있어요. 사라진 금화는 복구해 드릴 수 없어요.</p>`],
+  ['별 · 사탕은 어디에 써요?', `<p>별은 '다음 키링 투표'에서 만들었으면 하는 후보에 걸어요(한 후보에 하루 ${DAY_STAR}개). 사탕 ${DECO_CANDY}개로는 들판을 걷는 내 코브의 색을 바꿀 수 있어요. 지금은 하트 · 별 기록이 이 브라우저에만 저장돼서 코브 몰이 아직 셀 수 없어요.</p>`],
+  ['금화가 사라졌어요 · 다른 기기에서 안 보여요', `<p>가방은 이 브라우저에만 저장돼요. 인터넷 사용 기록을 지우거나 사생활 보호(시크릿) 창을 쓰면 사라지고, 다른 기기 · 브라우저에서는 보이지 않아요. 사파리는 7일 넘게 들르지 않으면 지워질 수도 있어요. 아이폰 · 아이패드에서 <b>홈 화면에 추가</b>한 코브 몰(주소창 없이 열리는 것)도 사파리와 따로 저장돼서, 사파리에서 모은 금화는 거기서 보이지 않아요. 사라진 금화는 복구해 드릴 수 없어요.</p>`],
   ['배송 · 교환 · 반품은요?', `<p>판매를 시작할 때 배송 기간 · 택배사 · 교환 · 반품 방법을 여기와 상품 창에 적어 둘게요. 지금 보이는 배송비(${won(R.SHIP_FEE)}, ${won(R.SHIP_FREE)} 이상 무료)는 예시예요.</p><p>반품은 판매를 시작하면 전자상거래법대로 받은 날부터 7일 안에 할 수 있어요. 설명과 다르거나 잘못 왔으면 받은 날부터 3개월, 그 사실을 안 날부터 30일 안에 반품할 수 있고 반품 배송비는 코브 몰이 내요. 교환 방법은 판매를 시작할 때 적어요.</p>`, 'ship'],
   ['회원가입하면 뭐가 달라요?', `<p>지금 계정은 이 브라우저에만 만들어져요. 로그아웃하면 이 브라우저에서 내 오피스(미니홈피)를 가려 둘 수 있고, 로그인 중엔 들판의 내 코브 이름표에 닉네임이 보여요. 이름 · 연락처 같은 개인정보는 받지 않아요.</p>`],
 ];
@@ -658,7 +661,7 @@ root.innerHTML=`
     <button type="button" class="mall-have" data-faq aria-describedby="faqTitle">🎒 하트 <b data-have="heart">0</b> · 별 <b data-have="star">0</b> · 금화 <b data-have="coin">0</b></button>
     <button type="button" class="mall-cart" data-cart>🛒 장바구니 <b data-cart-n>0</b></button>
   </div>
-  <p class="mall-soon">🚧 오픈 준비 중이에요 · 가격과 리뷰는 예시이고, 지금은 구경 · 장바구니 · 하트 · 투표만 돼요</p>
+  <p class="mall-soon">🚧 오픈 준비 중이에요 · 비숑 키링 말고는 화면을 보여 드리려는 예시 상품이에요 · 가격과 리뷰도 예시</p>
   <p class="fine mall-shipnote">카드의 가격은 키링 값이에요 · 배송비 ${won(R.SHIP_FEE)} 별도, ${won(R.SHIP_FREE)} 이상 무료 (예시) <button type="button" class="join-link" data-faq-go="ship">배송 · 반품 안내</button></p>
 
   <section class="mall-block" aria-label="키링 진열대">
@@ -682,7 +685,7 @@ root.innerHTML=`
             <h4 id="krName_${p.id}">${p.name}</h4>
             ${p.price?`<p class="kr-price"><b>${p.price.toLocaleString('ko-KR')}</b>원</p>`:''}
             <div class="kr-row">
-              <span class="kr-count" title="내가 준 하트">♥ <b data-given>0</b></span>
+              <span class="kr-count" title="내가 준 하트"><span class="sr-only">내가 준 하트 </span><span aria-hidden="true">♥</span> <b data-given>0</b></span>
               <button type="button" class="kr-btn" data-heart aria-describedby="krName_${p.id}">하트 선물</button>
             </div>
             <button type="button" class="kr-buy go" data-open aria-describedby="krName_${p.id}">자세히 · 구매</button>
@@ -694,14 +697,14 @@ root.innerHTML=`
 
   <section class="mall-block" aria-labelledby="voteTitle">
     <h3 id="voteTitle">⭐ 다음 키링 투표</h3>
-    <p class="fine">별을 걸어 다음에 만들 키링을 골라 주세요. 한 후보에 하루 ${DAY_STAR}개까지예요.</p>
+    <p class="fine">별을 걸어 다음에 만들었으면 하는 키링을 골라 주세요. 한 후보에 하루 ${DAY_STAR}개까지예요. 지금은 별이 이 브라우저에만 남아서 코브 몰이 아직 셀 수 없어요 (모두의 별을 모으는 건 준비 중).</p>
     <div class="votes">
       ${VOTES.map(v=>`
       <article class="vt" data-v="${v.id}">
         <div class="vt-art">${coveSVG(v.color,v.variant)}</div>
         <div class="vt-body">
           <h4>${v.name}</h4><p>${v.desc}</p>
-          <div class="kr-row"><span class="kr-count" title="내가 건 별">★ <b data-voted>0</b></span><button type="button" class="kr-btn star" data-star>별 걸기</button></div>
+          <div class="kr-row"><span class="kr-count">내 별 <span aria-hidden="true">★</span> <b data-voted>0</b></span><button type="button" class="kr-btn star" data-star>별 걸기</button></div>
         </div>
       </article>`).join('')}
     </div>
@@ -773,8 +776,8 @@ function paintBag(){
   // 뱃지
   const b=[];
   if(state.rainbow) b.push('🌈 무지개 코브가 되어 봤어요');
-  if(wallet.get('gem')>=GEM_EARLY) b.push(`💎 한정판 먼저 사기 자격 (보석 ${GEM_EARLY}개)`);
-  else b.push(`💎 보석 ${wallet.get('gem')} / ${GEM_EARLY} — 모으면 한정판 먼저 사기 자격`);
+  if(wallet.get('gem')>=GEM_EARLY) b.push(`💎 한정판 먼저 사기 자격 (보석 ${GEM_EARLY}개) · 한정판은 준비 중이에요`);
+  else b.push(`💎 보석 ${wallet.get('gem')} / ${GEM_EARLY} — 모으면 한정판이 나올 때 먼저 사기 자격`);
   if(c>=ITEM_MAX) b.push('🕶️ 해커 코브 ㅋㅋ (그래도 할인은 키링 1개당 100원)');
   $b('#badges').innerHTML=b.map(t=>`<li>${t}</li>`).join('');
 }
