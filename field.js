@@ -17,6 +17,7 @@
    - 주인공 이름표는 '🐾 코브' → 코브 몰 계정에 로그인 중이면 내 닉네임 (mall.js covvWallet.coveName)
    - 발열 대책: 외부 모델 0개(전부 코드로 생성), 풀·꽃은 인스턴싱 한 번에 그림, 후처리 없음,
      움직이지 않는 소품은 합쳐서 그림, 그림자는 한 번만 계산, 픽셀비율·프레임 상한, 다른 화면이 열리면 렌더 정지
+   - 자동 화질: 느린 컴퓨터(내장 그래픽 · 학원 PC 등)에서 움직일 때 꾸준히 느리면 해상도 → 풀 · 꽃 수 순서로 한 단계씩 낮춤 (주소에 ?fps를 붙이면 왼쪽 아래에 fps · 단계)
    ══════════════════════════════════════════════════════════ */
 (function(){
 'use strict';
@@ -35,6 +36,23 @@ const IDLE_FPS=30, IDLE_MS=20000;   // 누르기 · 움직이기 · 키 입력�
 const GRASS_COUNT=IS_TOUCH?15000:36000;
 const FLOWER_COUNT=IS_TOUCH?350:800;
 const SHADOW_SIZE=IS_TOUCH?1024:2048;
+/* 자동 화질 (아래 '자동 화질' 구역): 단계마다 dpr = 화면 배율 상한, grass · flower = 그릴 비율 — 0이 가장 좋음 */
+const QUALITY=[
+  {dpr:MAX_DPR, grass:1,   flower:1},
+  {dpr:1,       grass:1,   flower:1},    // 고해상도 화면(배율 1.25 · 1.5)이면 이것만으로도 그릴 점이 절반 안팎
+  {dpr:1,       grass:.6,  flower:.6},
+  {dpr:.85,     grass:.45, flower:.5},
+  {dpr:.7,      grass:.3,  flower:.4},   // 가장 낮게 — 조금 흐릿해도 움직임이 끊기지 않는 쪽
+];
+const Q_KEY='covv-field-q';        // 이 브라우저에서 고른 화질 단계 (다음 방문은 처음부터 그 단계)
+const Q_WARM=4000;                 // 시작하고 이만큼(ms)은 재지 않음 — 셰이더 · 그림 준비로 원래 끊김
+const Q_SLOW=1.35;                 // 평균 프레임 간격이 목표(1000/FPS)의 이 배를 넘으면 느림 (60fps 목표면 22ms ≈ 45fps 아래)
+const Q_HOLD=2000;                 // 이만큼(ms) 꾸준히 느리면 한 단계 내림 · 내린 뒤에도 이만큼 기다렸다 다시 잼
+const Q_GAP=250;                   // 이보다 긴 프레임 틈은 탭 전환 · 멈춤이라 세지 않음
+let qLv=0;
+try{ qLv=Math.min(QUALITY.length-1,Math.max(0,parseInt(localStorage.getItem(Q_KEY),10)||0)); }catch(e){}
+try{ const f=new URLSearchParams(location.search).get('q'); if(f!==null&&/^[0-4]$/.test(f)) qLv=Number(f); }catch(e){}   // ?q=0~4 = 단계를 손으로 정해 비교 (주인님 확인용)
+function dprNow(){ return Math.min(devicePixelRatio,QUALITY[qLv].dpr); }
 
 // r134는 재질 색을 선형값으로 받음 → hex를 그대로 넣으면 물빠져 보여서 변환해서 넣음
 const C=hex=>new THREE.Color(hex).convertSRGBToLinear();
@@ -171,10 +189,13 @@ const nearHome=(x,z,d)=>COVES.some(c=>Math.hypot(x-c.home[0],z-c.home[2])<d);
 
 /* ── 렌더러 ── */
 let renderer;
+let grassMesh=null, grassAll=0, flowerMesh=null, flowerAll=0;   // 자동 화질이 그릴 수를 줄임 (인스턴스는 무작위로 흩어 놓아서 앞에서부터 자르면 고르게 성겨짐)
 try{ renderer=new THREE.WebGLRenderer({antialias:true}); }
 catch(e){ fieldEl.classList.add('no-webgl'); window.covvField=null; return; }
-renderer.setPixelRatio(Math.min(devicePixelRatio,MAX_DPR));
+renderer.setPixelRatio(dprNow());
 renderer.outputEncoding=THREE.sRGBEncoding;
+// 소프트웨어 그래픽(크롬 '그래픽 가속'이 꺼졌거나 그래픽 칩을 못 씀 → 그림을 CPU가 그림)이면 처음부터 가장 낮은 단계
+try{ const gl=renderer.getContext(), ext=gl.getExtension('WEBGL_debug_renderer_info'), name=ext?String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)):''; if(/swiftshader|llvmpipe|softpipe|software|basic render/i.test(name)) qLv=QUALITY.length-1; }catch(e){}
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 stage.prepend(renderer.domElement);
@@ -643,7 +664,7 @@ function grassOK(x,z){
     grass.setColorAt(n,c.copy(white).lerp(warm,rnd()*0.8));
     n++;
   }
-  grass.count=n;
+  grass.count=n; grassMesh=grass; grassAll=n;
   scene.add(grass);
 })();
 
@@ -666,7 +687,7 @@ function grassOK(x,z){
       m4.compose(p3,q,s3); fl.setMatrixAt(n,m4); fl.setColorAt(n,col); n++;
     }
   }
-  fl.count=n; scene.add(fl);
+  fl.count=n; flowerMesh=fl; flowerAll=n; scene.add(fl);
 })();
 
 /* ── 반딧불 ── */
@@ -1722,7 +1743,7 @@ function resize(){
   const a=W/H;
   camCfg=a>=1.15?CAMS.wide:a>=0.8?CAMS.mid:CAMS.tall;
   camera.aspect=a; camera.fov=camCfg.fov; camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(devicePixelRatio,MAX_DPR));   // 다른 모니터로 옮겨도 선명도 유지
+  renderer.setPixelRatio(dprNow());   // 다른 모니터로 옮겨도 선명도 유지 (자동 화질 단계의 상한 안에서)
   camOff.fromArray(camCfg.off); camLookOff.fromArray(camCfg.look);
   // 세로 화면(휴대폰)에선 거품 4개를 가운데로 모아서 화면 밖으로 잘리지 않게
   const hx=camCfg===CAMS.tall?0.7:1;
@@ -1739,6 +1760,33 @@ resize();
   const h=()=>{ resize(); watchDpr(); };
   if(mq.addEventListener) mq.addEventListener('change',h,{once:true}); else if(mq.addListener) mq.addListener(h);
 })();
+
+/* ── 자동 화질: 느린 컴퓨터에서 움직임이 끊기지 않게 ──
+   그린 프레임 사이 시간을 재서 목표(FPS)보다 Q_HOLD 동안 꾸준히 느리면 한 단계 내림 (해상도 → 풀 · 꽃 수 → 해상도 더)
+   한 번 내린 단계로는 다시 올리지 않음(오르내리며 선명했다 흐렸다 하지 않게) · 고른 단계는 이 브라우저에 기억
+   가만히 둔 들판(IDLE_FPS로 일부러 느림)과 처음 Q_WARM은 재지 않음 */
+let qAvg=0, qSlowFor=0, qWait=0, qT0=0, fpsAvg=0;
+const fpsEl=(()=>{ try{ if(!new URLSearchParams(location.search).has('fps')) return null; }catch(e){ return null; } const p=document.createElement('p'); p.className='field-fps'; p.setAttribute('aria-hidden','true'); stage.appendChild(p); return p; })();   // ?fps = 주인님 확인용 숫자판
+function applyQuality(){
+  const Q=QUALITY[qLv];
+  renderer.setPixelRatio(dprNow()); renderer.setSize(W,H);
+  if(grassMesh) grassMesh.count=Math.round(grassAll*Q.grass);
+  if(flowerMesh) flowerMesh.count=Math.round(flowerAll*Q.flower);
+  try{ if(qLv) localStorage.setItem(Q_KEY,String(qLv)); else localStorage.removeItem(Q_KEY); }catch(e){}
+}
+function qSample(now,gap,idle){
+  if(gap>0&&gap<Q_GAP) fpsAvg=fpsAvg?fpsAvg+(gap-fpsAvg)*.1:gap;
+  if(fpsEl&&fpsAvg) fpsEl.textContent=`${Math.round(1000/fpsAvg)} fps · 화질 ${qLv+1}/${QUALITY.length}`;
+  if(idle||gap>=Q_GAP){ qSlowFor=0; return; }
+  if(!qT0) qT0=now;
+  if(now-qT0<Q_WARM||now<qWait||qLv>=QUALITY.length-1) return;
+  qAvg=qAvg?qAvg+(gap-qAvg)*.1:gap;
+  if(qAvg>1000/FPS*Q_SLOW){
+    qSlowFor+=gap;
+    if(qSlowFor>=Q_HOLD){ qLv++; applyQuality(); qSlowFor=0; qAvg=0; qWait=now+Q_HOLD; }
+  } else qSlowFor=0;
+}
+if(qLv) applyQuality();   // 지난번에 고른 단계 · 소프트웨어 그래픽 · ?q
 
 /* ── 전체 업데이트 ── */
 const camWant=new THREE.Vector3(), lookWant=new THREE.Vector3();
@@ -1792,9 +1840,10 @@ let rafId=null, last=0, prev=0, first=true, lastInput=performance.now();
 ['pointerdown','pointermove','keydown','wheel','touchstart'].forEach(t=>addEventListener(t,()=>{ lastInput=performance.now(); },{passive:true}));
 function frame(now){
   rafId=requestAnimationFrame(frame);
-  const iv=1000/(now-lastInput>IDLE_MS?Math.min(FPS,IDLE_FPS):FPS);
+  const idle=now-lastInput>IDLE_MS, iv=1000/(idle?Math.min(FPS,IDLE_FPS):FPS);
   if(now-last<iv-2) return;
   last=Math.min(now,Math.max(last+iv,now-iv));   // 일정 간격 유지 → 90·120·144Hz 화면에서도 목표 프레임 근처
+  qSample(now,now-prev,idle);   // 자동 화질
   const dt=Math.min((now-prev)/1000,0.05); prev=now;
   update(dt);
   renderer.render(scene,camera);
@@ -1842,6 +1891,8 @@ if(window.covvWallet&&window.covvWallet.state.look&&window.covvWallet.state.look
 // 디버그용: 브라우저 창이 가려져 있어도 시간을 직접 흘려서 확인할 수 있게
 window._field={renderer,scene,camera,coves,player,popCove,amb,items,collected,spawnAmb,popAmb,dropItem,changeCoveColor,shop,pics,slider,keyrings,TREES,
 
+  quality(n){ if(n>=0&&n<QUALITY.length){ qLv=n; applyQuality(); } return {level:qLv,dpr:renderer.getPixelRatio(),grass:grassMesh&&grassMesh.count,flower:flowerMesh&&flowerMesh.count}; },   // 확인용: _field.quality(0~4)
+  qSample,
   step(sec){ if(first){ first=false; loading&&loading.classList.add('hide'); startIntro(); player.state='emerge'; player.g.group.visible=true; }
     for(let t=0;t<sec;t+=1/60) update(1/60); renderer.render(scene,camera); }};
 start();
