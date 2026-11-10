@@ -560,12 +560,12 @@ function closable(d){
 function paintNav(){
   if(!navAcct) return;
   const m=W.signedIn(), name=W.profile().name;
-  navAcct.querySelector('[data-acct-label]').textContent=m?name:W.member()?'로그인':'회원가입';
+  navAcct.querySelector('[data-acct-label]').textContent=m?name:'로그인';   // 계정이 없어도 '로그인' — 휴대폰·PC 모두 같은 모습 (로그인 창 아래 '회원가입'으로 감)
   navAcct.setAttribute('aria-label',m?`내 계정 · ${name}`:'로그인 · 회원가입');
   navAcct.classList.toggle('on',m);
 }
 if(navAcct) navAcct.addEventListener('click',e=>{
-  if(!W.signedIn()){ if(W.member()) openLogin(); else openJoin(); return; }   // 계정이 있으면 로그인 창, 처음 온 손님은 회원가입 창 (계정 없이 로그인 창을 열면 무엇을 넣어도 '계정이 없어요'만 나옴)
+  if(!W.signedIn()){ openLogin(); return; }   // 늘 로그인 창부터 (주인님 11-10) — 계정은 브라우저마다 따로라 휴대폰에서 처음 열면 계정이 없어 회원가입 창이 먼저 뜨던 것 → 계정이 없으면 창 아래 '회원가입' 단추 · 로그인 누르면 NOACCT 안내
   showTab('account');   // 로그인 중이면 내 오피스 계정 탭으로 (이미 열려 있으면 탭만 바꿈)
   if(window.covvOpenScreen) window.covvOpenScreen('office',e.detail===0?{}:{x:e.clientX,y:e.clientY});
 });
