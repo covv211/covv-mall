@@ -53,7 +53,7 @@ function loadOffice(){
   if(!window.THREE){ if(st) st.classList.add('no-webgl'); return; }
   officeLoaded=true;
   if(st) st.classList.remove('no-webgl');
-  loadScript('office.js?v=1110s')
+  loadScript('office.js?v=1110u')
     .catch(()=>{   // 한 번 실패해도 다음에 열 때 다시 시도
       officeLoaded=false;
       document.querySelectorAll('script[data-office]').forEach(s=>s.remove());
@@ -134,6 +134,21 @@ if(goTop){
     goTopRaf=requestAnimationFrame(step);
   });
   addEventListener('covv-screen',()=>{ goTopStop(); paintGoTop(); });   // 다른 화면 · 들판으로 가면 멈추고 숨김
+}
+
+/* 휴대폰 전체 메뉴 (멘케트 헤더처럼 ☰ → 아래로 펼쳐지는 판, 모양은 style.css 720px 블록)
+   메뉴 항목 · 판 밖을 누르거나 Esc · 화면이 바뀌면 닫힘 — Esc는 캡처로 먼저 받아 '화면 닫기'(아래)보다 메뉴부터 닫음 */
+const navEl=document.querySelector('.nav'), navBtn=document.querySelector('[data-nav-menu]');
+function navMenu(open){
+  if(!navEl||!navBtn) return;
+  navEl.classList.toggle('menu-open',open);
+  navBtn.setAttribute('aria-expanded',String(open)); navBtn.setAttribute('aria-label',open?'전체 메뉴 닫기':'전체 메뉴');
+}
+if(navEl&&navBtn){
+  navBtn.addEventListener('click',()=>navMenu(!navEl.classList.contains('menu-open')));
+  document.addEventListener('click',e=>{ if(navEl.classList.contains('menu-open')&&!e.target.closest('[data-nav-menu]')&&(!e.target.closest('.nav-drop')||e.target.closest('a'))) navMenu(false); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!e.isComposing&&navEl.classList.contains('menu-open')){ e.preventDefault(); navMenu(false); navBtn.focus(); } },true);
+  addEventListener('covv-screen',()=>navMenu(false));
 }
 
 /* 메뉴 · 뒤로 버튼 */

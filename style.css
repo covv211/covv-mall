@@ -89,6 +89,8 @@ img {
 .nav nav { display: flex; gap: clamp(12px, 3vw, 30px); font-size: 20px; }
 .nav nav a { opacity: .7; transition: opacity .2s, color .3s, text-shadow .3s; white-space: nowrap; }
 .logo { justify-self: start; white-space: nowrap; }
+.nav-left { justify-self: start; display: flex; align-items: center; gap: 8px; min-width: 0; }   /* ☰(휴대폰만) + 로고 = 메뉴 줄 왼쪽 칸 */
+.nav-menu, .nav-drop { display: none; }   /* 휴대폰 전체 메뉴 — 넓은 화면은 메뉴가 다 보여서 숨김 (아래 720px 블록) */
 .nav nav a:hover, .nav nav a.active { opacity: 1; }
 .nav nav a.active { color: #b0306e; }
 .nav nav a.nav-mall { color: #b0306e; opacity: 1; }   /* 코브 몰은 늘 또렷하게 */
@@ -384,7 +386,7 @@ body.screen-open .field { visibility: hidden; }
 .bag-hud:focus-visible, .kr-btn:focus-visible, .sw:focus-visible, .nav-acct:focus-visible, .sns-link:focus-visible, .join-x:focus-visible, .join-link:focus-visible, .join-forgot summary:focus-visible, .privacy-note a:focus-visible, .pv-sec a:focus-visible,
 .kr-pic:focus-visible, .kr-buy.go:focus-visible, .mall-sort button:focus-visible, .mall-cart:focus-visible, .qty button:focus-visible, .pd-opt:focus-visible, .pd-cart:focus-visible, .pd-buy:focus-visible, .pd-rv-btn:focus-visible, .co-btn:focus-visible, .co-del:focus-visible, .co-pay-btn:focus-visible, .co-check input:focus-visible, .co-pay input:focus-visible + span,
 .hero-play:focus-visible, .hero-shop:focus-visible, .go-top:focus-visible, .mall-have:focus-visible, .faq summary:focus-visible, .foot-links a:focus-visible,
-.mall-search-x:focus-visible, .mall-search-go:focus-visible, .kr-none-hint:focus-visible, .kr-none-all:focus-visible, .pd-tip:focus-visible, .tip-btn:focus-visible, .ph-pill:focus-visible, .pd-share:focus-visible, .pd-gosi summary:focus-visible, .pd-rv-write:focus-visible, .rw-select:focus-visible, .rw-text textarea:focus-visible, .rw-pics button:focus-visible {
+.nav-menu:focus-visible, .mall-search-x:focus-visible, .mall-search-go:focus-visible, .kr-none-hint:focus-visible, .kr-none-all:focus-visible, .pd-tip:focus-visible, .tip-btn:focus-visible, .ph-pill:focus-visible, .pd-share:focus-visible, .pd-gosi summary:focus-visible, .pd-rv-write:focus-visible, .rw-select:focus-visible, .rw-text textarea:focus-visible, .rw-pics button:focus-visible {
     outline: 3px solid var(--accent);
     outline-offset: 2px;
 }
@@ -1383,6 +1385,23 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
     .mall-have { order: 3; padding: 8px 10px; font-size: 13.5px; }
     .screen { scroll-padding-top: 74px; scroll-padding-bottom: 84px; }
     .nav nav a { padding: 9px 0; }   /* 메뉴 글자 사이가 좁아 옆 메뉴가 눌리기 쉬움 → 누르는 높이만 늘림 (옆 여백을 주면 메뉴 5개 + 👤가 한 줄에 안 들어감) */
+    /* 휴대폰 전체 메뉴 (멘케트 헤더처럼): 위 메뉴엔 코브 몰만, 소개 · 작업물 · 연락처 · 내 오피스는 ☰ → 아래로 0.3초 일정하게 펼쳐지는 흰 판 (주인님 11-10: 메뉴가 너무 모여 있음) */
+    .nav nav a:not(.nav-mall) { display: none; }
+    .nav-menu { display: grid; place-items: center; width: 36px; height: 36px; margin-left: -6px; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; cursor: pointer; }
+    .nav-menu span, .nav-menu span::before, .nav-menu span::after { display: block; width: 18px; height: 2px; border-radius: 2px; background: currentColor; transition: background .2s, translate .3s, rotate .3s; }
+    .nav-menu span { position: relative; }
+    .nav-menu span::before, .nav-menu span::after { content: ""; position: absolute; left: 0; }
+    .nav-menu span::before { top: -6px; }
+    .nav-menu span::after { top: 6px; }
+    .nav.menu-open .nav-menu span { background: transparent; }   /* 열리면 ☰ → ✕ */
+    .nav.menu-open .nav-menu span::before { translate: 0 6px; rotate: 45deg; }
+    .nav.menu-open .nav-menu span::after { translate: 0 -6px; rotate: -45deg; }
+    .nav-drop { position: absolute; top: calc(100% + 8px); right: 0; left: 0; display: flex; flex-direction: column; padding: 6px; border-radius: 24px; background: rgba(255, 255, 255, .96); box-shadow: 0 6px 24px rgba(90, 40, 60, .16); visibility: hidden; clip-path: inset(0 0 100% 0 round 24px); transition: clip-path .3s linear, visibility 0s linear .3s; }   /* 닫힘: 위끝만 남기고 잘림 → 열면 위에서 아래로 펼쳐짐, 닫힌 판엔 포커스가 안 들어가게 visibility */
+    .nav.menu-open .nav-drop { visibility: visible; clip-path: inset(0 round 24px); transition-delay: 0s; }
+    .nav-drop li + li { border-top: 1.5px dashed var(--line); }
+    .nav-drop a { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 16px; color: var(--ink); font-size: 21px; letter-spacing: -.05em; }
+    .nav-drop a:hover { background: var(--accent-soft); }
+    .nav-drop a.active { color: #b0306e; }
     .mh-form input, .acct-pw input, .mh-diary-form textarea { font-size: 16px; }   /* 16px보다 작으면 아이폰이 누를 때 화면을 확대함 */
     .foot-brand span { display: block; margin: 2px 0 0; }
     .ph-page { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 20px; }   /* 휴대폰 미리보기: 설정 위 · 틀 아래 */
@@ -1402,6 +1421,7 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
     .tip-btn.danger { flex: 1; padding-right: 8px; padding-left: 8px; }   /* 좁은 폭에서 '한 번 더'가 옆 단추를 밀어 '리뷰 고/치기'로 끊기지 않게 세 단추를 나눠 가짐 */
 }
 @keyframes tipUp { from { translate: 0 100%; } }
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) { .nav-drop { clip-path: none; opacity: 0; transition: opacity .2s, visibility 0s linear .2s; } .nav.menu-open .nav-drop { clip-path: none; opacity: 1; } }   /* 휴대폰 전체 메뉴: 펼치는 대신 페이드 */
 @media (max-width: 720px) and (prefers-reduced-motion: reduce) { .tip[open], .tip.rw[open] { animation-name: joinFade; } }   /* 동작 줄이기: 올라오지 않고 페이드로 */
 @media (max-width: 420px) {   
     /* 메뉴 5개(코브 몰·내 오피스)가 한 줄에 들어가게 */
@@ -1446,6 +1466,7 @@ button.kr-pic { width: 100%; padding: 0; border: 0; background: none; color: inh
     .mall-sort button, .sw, .mall-cart, .mall-have, .kr-none-hint, .kr-none-all { min-height: 44px; }
     .mall-search-x { width: 44px; height: 44px; }
     .pd-rv-write, .pd-share { min-height: 44px; }
+    .nav-menu { width: 44px; height: 44px; margin-left: -10px; }
     .rw-chip span { min-height: 44px; padding-top: 12px; }
     .rw-stars { gap: 4px; }
     .rw-star span[aria-hidden] { width: 44px; height: 44px; }
